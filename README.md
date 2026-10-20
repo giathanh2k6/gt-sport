@@ -137,8 +137,8 @@ Sau khi chạy backend, hệ thống đã nạp sẵn 2 tài khoản mẫu:
 ## 📅 Lộ Trình Phát Triển (Development Roadmap)
 
 - [x] **Ngày 1:** Chuẩn hóa kiến trúc Backend, tách module Clean Code, bảo mật xác thực phân quyền với bcrypt & JWT.
-- [ ] **Ngày 2:** Nâng cấp CSDL chuyên sâu cho Giày bóng đá (đinh TF/FG/IC, hãng Nike/Adidas) & Xử lý Transaction chống âm kho.
-- [ ] **Ngày 3:** Thiết lập Design System thể thao Đen Than - Đỏ Crimson & Hệ thống định tuyến React Router chuyên nghiệp.
+- [x] **Ngày 2:** Nâng cấp CSDL chuyên sâu cho Giày bóng đá (đinh TF/FG/IC, hãng Nike/Adidas) & Xử lý Transaction chống âm kho.
+- [x] **Ngày 3:** Thiết lập Design System thể thao Đen Than - Đỏ Crimson & Hệ thống định tuyến React Router chuyên nghiệp.
 - [ ] **Ngày 4:** Xây dựng bộ lọc đa tiêu chí chuẩn E-commerce thể thao (Lọc theo mặt sân, thương hiệu, size).
 - [ ] **Ngày 5:** Trang chi tiết sản phẩm (PDP) & Modal hướng dẫn đo chiều dài bàn chân chọn size chuẩn.
 - [ ] **Ngày 6:** Giỏ hàng trượt (Slide-over Cart Drawer) & Hệ thống Toast Notifications.
