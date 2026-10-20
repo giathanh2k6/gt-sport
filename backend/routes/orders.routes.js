@@ -34,44 +34,102 @@ router.get('/orders/user/:userId', authenticateToken, (req, res) => {
 });
 
 /**
- * 3. POST /api/orders - Tạo đơn hàng & Tự động trừ tồn kho Size
+ * 3. POST /api/orders - Tạo đơn hàng & Tự động trừ tồn kho (Chống âm kho - Atomic Transaction)
  */
 router.post('/orders', optionalAuth, (req, res) => {
   const { user_id, customer_name, customer_phone, customer_address, items } = req.body;
 
-  if (!customer_name || !customer_phone || !items || items.length === 0) {
-    return res.status(400).json({ error: 'Thông tin đơn hàng không hợp lệ!' });
+  if (!customer_name || !customer_phone || !customer_address || !items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Thông tin người nhận và giỏ hàng không được để trống!' });
   }
 
+  // 1. Tính tổng giá trị đơn hàng
   let totalPrice = 0;
-  items.forEach((item) => {
+  for (const item of items) {
+    if (!item.product_id || !item.size || !item.quantity || item.quantity <= 0) {
+      return res.status(400).json({ error: 'Thông tin sản phẩm trong giỏ hàng không hợp lệ!' });
+    }
     totalPrice += item.price * item.quantity;
-  });
+  }
 
   const finalUserId = req.user ? req.user.id : (user_id || null);
 
-  const saveOrderItemsAndDeductStock = (orderId) => {
-    const stmtItem = db.prepare('INSERT INTO order_items (order_id, product_id, size, quantity, price) VALUES (?, ?, ?, ?, ?)');
-    const stmtDeductStock = db.prepare('UPDATE product_variants SET stock = stock - ? WHERE product_id = ? AND size = ?');
+  // 2. KIỂM TRA TỒN KHO TRƯỚC KHI TRỪ (CHỐNG BÁN KHỐNG / OVERSOLD)
+  let checkCount = 0;
+  let stockErrors = [];
 
-    items.forEach((item) => {
-      stmtItem.run(orderId, item.product_id, item.size, item.quantity, item.price);
-      stmtDeductStock.run(item.quantity, item.product_id, item.size);
+  items.forEach((item) => {
+    const checkSql = `
+      SELECT p.name, pv.stock, pv.size 
+      FROM product_variants pv 
+      JOIN products p ON pv.product_id = p.id 
+      WHERE pv.product_id = ? AND pv.size = ?
+    `;
+    db.get(checkSql, [item.product_id, item.size], (errCheck, variant) => {
+      checkCount++;
+
+      if (errCheck) {
+        stockErrors.push(`Lỗi kiểm tra kho: ${errCheck.message}`);
+      } else if (!variant) {
+        stockErrors.push(`Sản phẩm (ID: ${item.product_id}, Size: ${item.size}) không tồn tại trong kho!`);
+      } else if (variant.stock < item.quantity) {
+        stockErrors.push(
+          `Mẫu "${variant.name}" (Size ${item.size}) chỉ còn ${variant.stock} sản phẩm (bạn đặt ${item.quantity}). Rất tiếc sản phẩm vừa hết hàng!`
+        );
+      }
+
+      // Khi đã kiểm tra đủ tất cả mặt hàng trong giỏ
+      if (checkCount === items.length) {
+        if (stockErrors.length > 0) {
+          return res.status(400).json({ error: stockErrors.join(' | ') });
+        }
+
+        // 3. TẤT CẢ ĐỀU ĐỦ HÀNG -> BẮT ĐẦU TRANSACTION TRỪ KHO VÀ LƯU ĐƠN
+        db.serialize(() => {
+          db.run('BEGIN TRANSACTION');
+
+          const sqlOrder = `
+            INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, total_price, status) 
+            VALUES (?, ?, ?, ?, ?, 'pending')
+          `;
+
+          db.run(sqlOrder, [finalUserId, customer_name, customer_phone, customer_address, totalPrice], function (errOrder) {
+            if (errOrder) {
+              db.run('ROLLBACK');
+              return res.status(500).json({ error: 'Lỗi tạo đơn hàng: ' + errOrder.message });
+            }
+
+            const orderId = this.lastID;
+            const stmtItem = db.prepare('INSERT INTO order_items (order_id, product_id, size, quantity, price) VALUES (?, ?, ?, ?, ?)');
+            const stmtDeduct = db.prepare('UPDATE product_variants SET stock = stock - ? WHERE product_id = ? AND size = ? AND stock >= ?');
+
+            try {
+              items.forEach((item) => {
+                stmtItem.run(orderId, item.product_id, item.size, item.quantity, item.price);
+                stmtDeduct.run(item.quantity, item.product_id, item.size, item.quantity);
+              });
+
+              stmtItem.finalize();
+              stmtDeduct.finalize();
+
+              db.run('COMMIT', (errCommit) => {
+                if (errCommit) {
+                  db.run('ROLLBACK');
+                  return res.status(500).json({ error: 'Lỗi xác nhận trừ kho: ' + errCommit.message });
+                }
+                res.status(201).json({
+                  message: 'Đặt hàng thành công! Đơn hàng của bạn đã được ghi nhận và giữ chỗ trong kho.',
+                  order_id: orderId
+                });
+              });
+            } catch (deductError) {
+              db.run('ROLLBACK');
+              res.status(500).json({ error: 'Lỗi xử lý kho: ' + deductError.message });
+            }
+          });
+        });
+      }
     });
-
-    stmtItem.finalize();
-    stmtDeductStock.finalize();
-
-    res.status(201).json({ message: 'Đặt hàng thành công!', order_id: orderId });
-  };
-
-  const sqlOrder = `INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, total_price, status) VALUES (?, ?, ?, ?, ?, 'pending')`;
-
-  db.run(sqlOrder, [finalUserId, customer_name, customer_phone, customer_address, totalPrice], function (err) {
-    if (err) {
-      return res.status(500).json({ error: 'Lỗi khi tạo đơn hàng: ' + err.message });
-    }
-    saveOrderItemsAndDeductStock(this.lastID);
   });
 });
 

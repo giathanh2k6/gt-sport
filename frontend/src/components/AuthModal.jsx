@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, Phone, UserCheck, X } from 'lucide-react';
+import { User, Lock, Phone, UserCheck, X, Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
@@ -11,30 +11,43 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     phone: ''
   });
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
+    setLoading(true);
 
     try {
       if (isRegisterMode) {
         // Đăng ký
-        const res = await axios.post('/api/register', formData);
-        alert('🎉 Đăng ký tài khoản thành công! Hãy đăng nhập ngay.');
-        setIsRegisterMode(false);
+        const res = await axios.post('/api/auth/register', formData);
+        setSuccessMsg('🎉 Đăng ký thành công! Đang tự động đăng nhập...');
+        setTimeout(() => {
+          if (res.data.token && res.data.user) {
+            onLoginSuccess(res.data.token, res.data.user);
+            onClose();
+          } else {
+            setIsRegisterMode(false);
+          }
+        }, 1000);
       } else {
         // Đăng nhập
-        const res = await axios.post('/api/login', {
+        const res = await axios.post('/api/auth/login', {
           username: formData.username,
           password: formData.password
         });
-        onLoginSuccess(res.data.user);
+        onLoginSuccess(res.data.token, res.data.user);
         onClose();
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.error || 'Có lỗi xảy ra, vui lòng thử lại!');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,96 +57,129 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     } else {
       setFormData({ username: 'khach1', password: '123', name: '', phone: '' });
     }
+    setErrorMsg('');
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 text-slate-100 relative">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-[#141822] border border-[#232a3b] rounded-2xl shadow-2xl w-full max-w-md p-6 text-slate-100 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#1a1f2b] transition"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-2 font-black text-2xl border border-emerald-500/30">
+          <div className="w-12 h-12 bg-[#e11d48]/15 text-[#e11d48] rounded-2xl flex items-center justify-center mx-auto mb-2 font-black text-2xl border border-[#e11d48]/30 shadow-lg shadow-rose-900/30">
             ⚽
           </div>
-          <h3 className="font-extrabold text-xl text-white">
-            {isRegisterMode ? 'Đăng Ký Tài Khoản Mới' : 'Đăng Nhập Hệ Thống'}
+          <h3 className="font-black italic text-2xl text-white uppercase tracking-tight">
+            {isRegisterMode ? 'Đăng Ký Thành Viên' : 'Đăng Nhập GT SPORT'}
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            {isRegisterMode ? 'Tạo tài khoản để mua hàng & theo dõi đơn' : 'Nhập tài khoản Admin hoặc Khách Hàng để tiếp tục'}
+            {isRegisterMode ? 'Tạo tài khoản để đặt hàng và theo dõi đơn' : 'Đăng nhập để trải nghiệm mua sắm đồ bóng đá đỉnh cao'}
           </p>
         </div>
 
         {errorMsg && (
-          <div className="bg-red-950/80 border border-red-800 text-red-300 text-xs p-3 rounded-xl mb-4 font-semibold">
-            ⚠️ {errorMsg}
+          <div className="mb-4 p-3 bg-rose-950/60 border border-rose-800 text-rose-300 text-xs rounded-xl flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        {successMsg && (
+          <div className="mb-4 p-3 bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs rounded-xl flex items-center gap-2">
+            <span>✅</span>
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Quick Fill Buttons */}
+        {!isRegisterMode && (
+          <div className="mb-4 p-3 bg-[#0a0c10] rounded-xl border border-[#232a3b]">
+            <p className="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1">
+              <Sparkles size={12} className="text-[#e11d48]" /> Tài khoản thử nghiệm nhanh:
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => fillQuickAccount('admin')}
+                className="py-1 px-2.5 rounded-lg text-xs font-bold bg-[#141822] hover:bg-[#1b212f] text-rose-400 border border-rose-900/40 hover:border-rose-700 transition"
+              >
+                🛡️ Admin: admin / 123
+              </button>
+              <button
+                type="button"
+                onClick={() => fillQuickAccount('khach')}
+                className="py-1 px-2.5 rounded-lg text-xs font-bold bg-[#141822] hover:bg-[#1b212f] text-slate-300 border border-[#232a3b] hover:border-slate-500 transition"
+              >
+                🛒 Khách: khach1 / 123
+              </button>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {isRegisterMode && (
             <div>
-              <label className="block font-bold text-slate-300 mb-1">Họ và Tên *</label>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Họ Và Tên *</label>
               <div className="relative">
-                <UserCheck className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <User className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="text"
                   required
-                  placeholder="VD: Nguyễn Văn A"
+                  placeholder="Ví dụ: Nguyễn Văn An"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full pl-9 pr-3 py-2 bg-[#0a0c10] border border-[#232a3b] rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#e11d48] focus:ring-1 focus:ring-[#e11d48]"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block font-bold text-slate-300 mb-1">Tên Đăng Nhập (Username) *</label>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Tên Đăng Nhập *</label>
             <div className="relative">
-              <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <UserCheck className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
               <input
                 type="text"
                 required
-                placeholder="VD: admin hoặc khach1"
+                placeholder="Nhập tên đăng nhập"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9 pr-3 py-2 bg-[#0a0c10] border border-[#232a3b] rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#e11d48] focus:ring-1 focus:ring-[#e11d48]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block font-bold text-slate-300 mb-1">Mật Khẩu *</label>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Mật Khẩu *</label>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
               <input
                 type="password"
                 required
-                placeholder="Nhập mật khẩu"
+                placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9 pr-3 py-2 bg-[#0a0c10] border border-[#232a3b] rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#e11d48] focus:ring-1 focus:ring-[#e11d48]"
               />
             </div>
           </div>
 
           {isRegisterMode && (
             <div>
-              <label className="block font-bold text-slate-300 mb-1">Số Điện Thoại *</label>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Số Điện Thoại</label>
               <div className="relative">
-                <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
-                  type="tel"
-                  required
-                  placeholder="0987654321"
+                  type="text"
+                  placeholder="Ví dụ: 0912345678"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full pl-9 pr-3 py-2 bg-[#0a0c10] border border-[#232a3b] rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#e11d48] focus:ring-1 focus:ring-[#e11d48]"
                 />
               </div>
             </div>
@@ -141,57 +187,28 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl shadow-lg transition text-xs"
+            disabled={loading}
+            className="w-full py-2.5 mt-2 bg-[#e11d48] hover:bg-[#ff2442] active:scale-[0.99] text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-lg shadow-rose-900/40 transition disabled:opacity-50"
           >
-            {isRegisterMode ? 'Tạo Tài Khoản Khách Hàng' : 'Đăng Nhập'}
+            {loading ? 'Đang xử lý...' : (isRegisterMode ? 'Xác Nhận Đăng Ký' : 'Đăng Nhập Ngay')}
           </button>
         </form>
 
-        {/* Dynamic Quick Login Buttons */}
-        {!isRegisterMode && (
-          <div className="mt-4 pt-4 border-t border-slate-800 text-[11px] text-center space-y-2">
-            <p className="text-slate-400">Bấm thử tài khoản mẫu có sẵn:</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('admin')}
-                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-1.5 rounded-lg border border-emerald-900/60"
-              >
-                🛡️ Tk Admin (`admin`)
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('customer')}
-                className="w-1/2 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded-lg border border-blue-900/60"
-              >
-                👤 Tk Khách (`khach1`)
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4 text-center text-xs text-slate-400">
-          {isRegisterMode ? (
-            <p>
-              Đã có tài khoản?{' '}
-              <button
-                onClick={() => setIsRegisterMode(false)}
-                className="text-emerald-400 font-bold hover:underline"
-              >
-                Đăng nhập ngay
-              </button>
-            </p>
-          ) : (
-            <p>
-              Chưa có tài khoản?{' '}
-              <button
-                onClick={() => setIsRegisterMode(true)}
-                className="text-emerald-400 font-bold hover:underline"
-              >
-                Đăng ký tài khoản Khách
-              </button>
-            </p>
-          )}
+        <div className="mt-5 text-center border-t border-[#232a3b] pt-4">
+          <p className="text-xs text-slate-400">
+            {isRegisterMode ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegisterMode(!isRegisterMode);
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+              className="text-[#e11d48] font-bold hover:underline ml-1"
+            >
+              {isRegisterMode ? 'Đăng nhập tại đây' : 'Đăng ký miễn phí'}
+            </button>
+          </p>
         </div>
       </div>
     </div>

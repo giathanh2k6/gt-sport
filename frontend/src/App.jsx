@@ -1,16 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CustomerPortal from './components/CustomerPortal';
 import AdminPortal from './components/AdminPortal';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState('customer'); // 'customer' or 'admin'
-  const [currentUser, setCurrentUser] = useState(null); // Currently logged-in user
+  const [currentUser, setCurrentUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  // Khôi phục phiên đăng nhập từ localStorage khi mở web
+  useEffect(() => {
+    const token = localStorage.getItem('gt_token');
+    const userStr = localStorage.getItem('gt_user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUser(user);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } catch (e) {
+        console.error('Lỗi phân tích thông tin user:', e);
+      }
+    }
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -35,7 +51,7 @@ export default function App() {
       const res = await axios.get('/api/orders');
       setOrders(res.data);
     } catch (err) {
-      console.error('Lỗi lấy đơn hàng:', err);
+      // 401/403 là bình thường nếu chưa đăng nhập quyền admin
     }
   };
 
@@ -44,82 +60,101 @@ export default function App() {
       const res = await axios.get('/api/stats');
       setStats(res.data);
     } catch (err) {
-      console.error('Lỗi lấy thống kê:', err);
+      // 401/403 là bình thường nếu chưa đăng nhập quyền admin
     }
   };
 
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      await Promise.all([fetchProducts(), fetchCategories(), fetchOrders(), fetchStats()]);
+      await Promise.all([fetchProducts(), fetchCategories()]);
+      const token = localStorage.getItem('gt_token');
+      if (token) {
+        await Promise.all([fetchOrders(), fetchStats()]);
+      }
       setLoading(false);
     };
     initData();
   }, []);
 
+  const handleLoginSuccess = (token, user) => {
+    localStorage.setItem('gt_token', token);
+    localStorage.setItem('gt_user', JSON.stringify(user));
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setCurrentUser(user);
+
+    if (user.role === 'admin') {
+      fetchOrders();
+      fetchStats();
+      navigate('/admin');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('gt_token');
+    localStorage.removeItem('gt_user');
+    delete axios.defaults.headers.common['Authorization'];
+    setCurrentUser(null);
+    navigate('/');
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 text-white">
-        <div className="text-center space-y-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
-          <p className="font-bold text-sm text-slate-300">Đang nạp hệ thống KickOff Sport...</p>
+      <div className="flex items-center justify-center h-screen bg-[#0a0c10] text-white">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#e11d48]"></div>
+            <span className="absolute inset-0 flex items-center justify-center text-xl">⚽</span>
+          </div>
+          <div>
+            <p className="font-black italic text-lg tracking-wider text-white">
+              GT <span className="text-[#e11d48]">SPORT</span>
+            </p>
+            <p className="font-semibold text-xs text-slate-400 mt-1">Đang khởi động hệ thống thể thao...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Top System Switcher Bar */}
-      <div className="bg-slate-950 text-slate-400 text-xs py-1.5 px-4 flex justify-between items-center border-b border-slate-800">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Dự Án Fullstack KickOff Sport - Trạng thái: <strong>Đang hoạt động</strong></span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-slate-500">Chuyển giao diện:</span>
-          <button
-            onClick={() => setViewMode('customer')}
-            className={`px-2.5 py-0.5 rounded font-bold transition ${
-              viewMode === 'customer' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            🛒 Cửa Hàng Khách Mua
-          </button>
-          <button
-            onClick={() => setViewMode('admin')}
-            className={`px-2.5 py-0.5 rounded font-bold transition ${
-              viewMode === 'admin' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            🛡️ Trang Quản Lý Admin
-          </button>
-        </div>
-      </div>
+    <Routes>
+      {/* 1. Trang Cửa Hàng Dành Cho Khách Hàng */}
+      <Route
+        path="/"
+        element={
+          <CustomerPortal
+            products={products}
+            categories={categories}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+            fetchProducts={fetchProducts}
+            fetchOrders={fetchOrders}
+            fetchStats={fetchStats}
+            onLoginSuccess={handleLoginSuccess}
+            onLogout={handleLogout}
+          />
+        }
+      />
 
-      {/* Render Selected View */}
-      {viewMode === 'customer' ? (
-        <CustomerPortal
-          products={products}
-          categories={categories}
-          currentUser={currentUser}
-          setCurrentUser={setCurrentUser}
-          fetchProducts={fetchProducts}
-          fetchOrders={fetchOrders}
-          fetchStats={fetchStats}
-          onSwitchToAdmin={() => setViewMode('admin')}
-        />
-      ) : (
-        <AdminPortal
-          stats={stats}
-          products={products}
-          categories={categories}
-          orders={orders}
-          fetchProducts={fetchProducts}
-          fetchOrders={fetchOrders}
-          fetchStats={fetchStats}
-        />
-      )}
-    </div>
+      {/* 2. Cổng Quản Trị Dành Cho Admin */}
+      <Route
+        path="/admin"
+        element={
+          <AdminPortal
+            stats={stats}
+            products={products}
+            categories={categories}
+            orders={orders}
+            fetchProducts={fetchProducts}
+            fetchOrders={fetchOrders}
+            fetchStats={fetchStats}
+          />
+        }
+      />
+
+      {/* Điều hướng mặc định các đường dẫn lạ về trang chủ */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

@@ -1,9 +1,39 @@
 @import "tailwindcss";
 
+@theme {
+  --color-pitch-950: #05070a;
+  --color-pitch-900: #0a0c10;
+  --color-pitch-800: #12151d;
+  --color-pitch-700: #1a1f2b;
+  --color-charcoal-card: #141822;
+  --color-charcoal-hover: #1b212f;
+  --color-charcoal-border: #232a3b;
+  --color-crimson-600: #e11d48;
+  --color-crimson-500: #ff2442;
+  --color-crimson-400: #fb7185;
+  --color-volt: #ccff00;
+}
+
 @layer base {
   body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: #0a0c10;
+    color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow-x: hidden;
   }
+}
+
+/* Thanh cuộn phong cách thể thao High-Tech */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0c10;
+}
+::-webkit-scrollbar-thumb {
+  background: #232a3b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #e11d48;
 }

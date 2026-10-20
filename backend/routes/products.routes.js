@@ -8,28 +8,60 @@ const router = express.Router();
  * 1. GET /api/categories - Lấy danh mục sản phẩm (Public)
  */
 router.get('/categories', (req, res) => {
-  db.all('SELECT * FROM categories', [], (err, rows) => {
+  db.all('SELECT * FROM categories ORDER BY id ASC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
 /**
- * 2. GET /api/products - Lấy danh sách sản phẩm kèm Biến thể Size (Public)
+ * 2. GET /api/products - Lấy danh sách sản phẩm kèm Biến thể Size (Hỗ trợ lọc đa tiêu chí)
+ * Query params: ?category_type=shoes|kit &stud_type=TF|FG|IC &brand=Nike|Adidas &search=...
  */
 router.get('/products', (req, res) => {
-  const query = `
+  const { category_type, stud_type, brand, category_id, search } = req.query;
+
+  let query = `
     SELECT p.*, c.name AS category_name, c.slug AS category_slug
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
-    ORDER BY p.id DESC
+    WHERE 1=1
   `;
+  const params = [];
 
-  db.all(query, [], (err, products) => {
+  if (category_type) {
+    query += ' AND p.category_type = ?';
+    params.push(category_type);
+  }
+
+  if (stud_type) {
+    query += ' AND p.stud_type = ?';
+    params.push(stud_type);
+  }
+
+  if (brand) {
+    query += ' AND LOWER(p.brand) = LOWER(?)';
+    params.push(brand);
+  }
+
+  if (category_id) {
+    query += ' AND p.category_id = ?';
+    params.push(category_id);
+  }
+
+  if (search) {
+    query += ' AND (p.name LIKE ? OR p.sku LIKE ? OR p.description LIKE ?)';
+    const searchPattern = `%${search}%`;
+    params.push(searchPattern, searchPattern, searchPattern);
+  }
+
+  query += ' ORDER BY p.id DESC';
+
+  db.all(query, params, (err, products) => {
     if (err) return res.status(500).json({ error: err.message });
 
-    db.all('SELECT * FROM product_variants', [], (err, variants) => {
-      if (err) return res.status(500).json({ error: err.message });
+    db.all('SELECT * FROM product_variants', [], (errVar, variants) => {
+      if (errVar) return res.status(500).json({ error: errVar.message });
 
       const productsWithVariants = products.map((product) => {
         const productVariants = variants.filter((v) => v.product_id === product.id);
@@ -62,8 +94,8 @@ router.get('/products/:id', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!product) return res.status(404).json({ error: 'Không tìm thấy sản phẩm!' });
 
-    db.all('SELECT * FROM product_variants WHERE product_id = ?', [id], (err, variants) => {
-      if (err) return res.status(500).json({ error: err.message });
+    db.all('SELECT * FROM product_variants WHERE product_id = ?', [id], (errVar, variants) => {
+      if (errVar) return res.status(500).json({ error: errVar.message });
       const totalStock = variants.reduce((sum, v) => sum + v.stock, 0);
       res.json({
         ...product,
@@ -78,30 +110,46 @@ router.get('/products/:id', (req, res) => {
  * 4. POST /api/products - Thêm sản phẩm mới (Yêu cầu quyền Admin)
  */
 router.post('/products', authenticateToken, requireAdmin, (req, res) => {
-  const { name, sku, category_id, price, image_url, description, variants } = req.body;
+  const {
+    name, sku, category_id, brand, category_type, stud_type, tier, season, version_type,
+    price, image_url, description, variants
+  } = req.body;
 
   if (!name || !sku || !price) {
     return res.status(400).json({ error: 'Vui lòng điền Tên, SKU và Giá sản phẩm!' });
   }
 
-  const sql = `INSERT INTO products (name, sku, category_id, price, image_url, description) VALUES (?, ?, ?, ?, ?, ?)`;
-  db.run(sql, [name, sku, category_id, price, image_url, description], function (err) {
-    if (err) {
-      if (err.message.includes('UNIQUE')) {
-        return res.status(400).json({ error: 'Mã SKU này đã tồn tại trong kho!' });
+  const sql = `
+    INSERT INTO products (
+      name, sku, category_id, brand, category_type, stud_type, tier, season, version_type, price, image_url, description
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(
+    sql,
+    [
+      name, sku, category_id || 1, brand || 'Nike', category_type || 'shoes',
+      stud_type || null, tier || null, season || null, version_type || null,
+      price, image_url || '', description || ''
+    ],
+    function (err) {
+      if (err) {
+        if (err.message.includes('UNIQUE')) {
+          return res.status(400).json({ error: 'Mã SKU này đã tồn tại trong kho!' });
+        }
+        return res.status(500).json({ error: err.message });
       }
-      return res.status(500).json({ error: err.message });
-    }
 
-    const productId = this.lastID;
-    if (variants && Array.isArray(variants) && variants.length > 0) {
-      const stmt = db.prepare('INSERT INTO product_variants (product_id, size, stock) VALUES (?, ?, ?)');
-      variants.forEach((v) => stmt.run(productId, v.size, v.stock));
-      stmt.finalize();
-    }
+      const productId = this.lastID;
+      if (variants && Array.isArray(variants) && variants.length > 0) {
+        const stmt = db.prepare('INSERT INTO product_variants (product_id, size, stock) VALUES (?, ?, ?)');
+        variants.forEach((v) => stmt.run(productId, v.size, v.stock));
+        stmt.finalize();
+      }
 
-    res.status(201).json({ message: 'Tạo sản phẩm thành công!', id: productId });
-  });
+      res.status(201).json({ message: 'Tạo sản phẩm thành công!', id: productId });
+    }
+  );
 });
 
 /**
@@ -109,22 +157,39 @@ router.post('/products', authenticateToken, requireAdmin, (req, res) => {
  */
 router.put('/products/:id', authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, sku, category_id, price, image_url, description, variants } = req.body;
+  const {
+    name, sku, category_id, brand, category_type, stud_type, tier, season, version_type,
+    price, image_url, description, variants
+  } = req.body;
 
-  const sql = `UPDATE products SET name = ?, sku = ?, category_id = ?, price = ?, image_url = ?, description = ? WHERE id = ?`;
-  db.run(sql, [name, sku, category_id, price, image_url, description, id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
+  const sql = `
+    UPDATE products SET
+      name = ?, sku = ?, category_id = ?, brand = ?, category_type = ?,
+      stud_type = ?, tier = ?, season = ?, version_type = ?,
+      price = ?, image_url = ?, description = ?
+    WHERE id = ?
+  `;
 
-    if (variants && Array.isArray(variants)) {
-      db.run('DELETE FROM product_variants WHERE product_id = ?', [id], () => {
-        const stmt = db.prepare('INSERT INTO product_variants (product_id, size, stock) VALUES (?, ?, ?)');
-        variants.forEach((v) => stmt.run(id, v.size, v.stock));
-        stmt.finalize();
-      });
+  db.run(
+    sql,
+    [
+      name, sku, category_id, brand, category_type, stud_type, tier, season, version_type,
+      price, image_url, description, id
+    ],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (variants && Array.isArray(variants)) {
+        db.run('DELETE FROM product_variants WHERE product_id = ?', [id], () => {
+          const stmt = db.prepare('INSERT INTO product_variants (product_id, size, stock) VALUES (?, ?, ?)');
+          variants.forEach((v) => stmt.run(id, v.size, v.stock));
+          stmt.finalize();
+        });
+      }
+
+      res.json({ message: 'Cập nhật sản phẩm thành công!' });
     }
-
-    res.json({ message: 'Cập nhật sản phẩm thành công!' });
-  });
+  );
 });
 
 /**

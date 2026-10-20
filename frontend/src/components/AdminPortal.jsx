@@ -208,7 +208,7 @@ export default function AdminPortal({
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-slate-800 flex items-center justify-between px-2 text-xs">
+        <div className="pt-4 border-t border-slate-800 space-y-3 px-2 text-xs">
           <div className="flex items-center gap-2">
             <img
               src="/AvtAdmin.jpg"
@@ -216,10 +216,16 @@ export default function AdminPortal({
               className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 shadow-md"
             />
             <div>
-              <p className="font-bold text-slate-200">Nguyễn Gia Thanh </p>
+              <p className="font-bold text-slate-200">Nguyễn Gia Thành</p>
               <p className="text-[10px] text-slate-500">Quyền: Super Admin</p>
             </div>
           </div>
+          <a
+            href="/"
+            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold transition text-xs"
+          >
+            🛒 Quay Lại Cửa Hàng
+          </a>
         </div>
       </aside>
 
