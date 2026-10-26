@@ -69,6 +69,11 @@ db.serialize(() => {
     });
   });
 
+  // Tự động chuẩn hóa dữ liệu category_type và brand cho các kit mẫu
+  db.run(`UPDATE products SET category_type = 'kit', brand = 'Adidas' WHERE sku IN ('AD-MU24-KIT-PLY', 'AD-RMA24-KIT-FAN')`);
+  db.run(`UPDATE products SET category_type = 'kit', brand = 'Jogarbola' WHERE sku = 'JG-VN24-KIT-RED'`);
+  db.run(`UPDATE products SET category_type = 'shoes' WHERE category_type IS NULL OR category_type = ''`);
+
   // 4. Bảng Biến Thể Tồn Kho (Size & Stock)
   db.run(`
     CREATE TABLE IF NOT EXISTS product_variants (

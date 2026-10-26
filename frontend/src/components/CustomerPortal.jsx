@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ShoppingCart,
   CheckCircle,
@@ -15,11 +15,16 @@ import {
   Tag,
   Truck,
   RotateCcw,
-  ShieldAlert
+  ShieldAlert,
+  Ruler,
+  Eye
 } from 'lucide-react';
 import axios from 'axios';
 import Navbar from './Navbar';
 import AuthModal from './AuthModal';
+import ProductFilterBar from './ProductFilterBar';
+import SizeGuideModal from './SizeGuideModal';
+import ProductDetailModal from './ProductDetailModal';
 
 export default function CustomerPortal({
   products,
@@ -36,10 +41,20 @@ export default function CustomerPortal({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [detailModalProduct, setDetailModalProduct] = useState(null);
+
   const [customerOrders, setCustomerOrders] = useState([]);
+
+  // States bộ lọc đa tiêu chí (Day 4)
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStudType, setSelectedStudType] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedSizeFilter, setSelectedSizeFilter] = useState('');
+  const [priceRange, setPriceRange] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const [searchTerm, setSearchTerm] = useState('');
+
   const [selectedSize, setSelectedSize] = useState({});
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderError, setOrderError] = useState('');
@@ -97,8 +112,31 @@ export default function CustomerPortal({
     }
   };
 
-  const addToCart = (product) => {
-    const size = selectedSize[product.id];
+  // Đặt lại toàn bộ bộ lọc
+  const handleResetFilters = () => {
+    setSelectedCategory('');
+    setSelectedStudType('');
+    setSelectedBrand('');
+    setSelectedSizeFilter('');
+    setPriceRange('all');
+    setSortBy('newest');
+    setSearchTerm('');
+  };
+
+  // Tính số lượng bộ lọc đang hoạt động
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedStudType || selectedCategory) count++;
+    if (selectedBrand) count++;
+    if (selectedSizeFilter) count++;
+    if (priceRange !== 'all') count++;
+    if (searchTerm) count++;
+    return count;
+  }, [selectedStudType, selectedCategory, selectedBrand, selectedSizeFilter, priceRange, searchTerm]);
+
+  // Thêm vào giỏ hàng
+  const addToCart = (product, specificSize = null) => {
+    const size = specificSize || selectedSize[product.id];
     if (!size) {
       alert('⚠️ Vui lòng chọn Size (kích thước) trước khi thêm vào giỏ hàng!');
       return;
@@ -188,25 +226,68 @@ export default function CustomerPortal({
     }
   };
 
-  // Lọc sản phẩm theo tiêu chí
-  const filteredProducts = products.filter((p) => {
-    // 1. Lọc theo stud_type (TF, FG, IC)
-    if (selectedStudType && p.stud_type !== selectedStudType) {
-      return false;
-    }
-    // 2. Lọc theo category_type (kit)
-    if (selectedCategory === 'kit' && p.category_type !== 'kit') {
-      return false;
-    }
-    // 3. Lọc theo từ khóa tìm kiếm
-    if (searchTerm) {
-      const matchName = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchBrand = p.brand && p.brand.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStud = p.stud_type && p.stud_type.toLowerCase().includes(searchTerm.toLowerCase());
-      if (!matchName && !matchBrand && !matchStud) return false;
-    }
-    return true;
-  });
+  // Lọc và Sắp xếp sản phẩm đa tiêu chí
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((p) => {
+        // 1. Lọc theo stud_type (TF, FG, IC)
+        if (selectedStudType && p.stud_type !== selectedStudType) {
+          return false;
+        }
+
+        // 2. Lọc theo category_type (kit)
+        if (selectedCategory === 'kit' && p.category_type !== 'kit') {
+          return false;
+        }
+
+        // 3. Lọc theo Thương hiệu (Brand)
+        if (selectedBrand && p.brand?.toLowerCase() !== selectedBrand.toLowerCase()) {
+          return false;
+        }
+
+        // 4. Lọc theo Size khả dụng (variants có size và stock > 0)
+        if (selectedSizeFilter) {
+          const hasSizeInStock = p.variants?.some(
+            (v) => v.size === selectedSizeFilter && v.stock > 0
+          );
+          if (!hasSizeInStock) return false;
+        }
+
+        // 5. Lọc theo Khoảng giá
+        if (priceRange === 'under-1m' && p.price >= 1000000) return false;
+        if (priceRange === '1m-2m' && (p.price < 1000000 || p.price > 2000000)) return false;
+        if (priceRange === '2m-3m' && (p.price <= 2000000 || p.price > 3000000)) return false;
+        if (priceRange === 'over-3m' && p.price <= 3000000) return false;
+
+        // 6. Lọc theo từ khóa tìm kiếm
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          const matchName = p.name?.toLowerCase().includes(term);
+          const matchBrand = p.brand?.toLowerCase().includes(term);
+          const matchStud = p.stud_type?.toLowerCase().includes(term);
+          const matchSku = p.sku?.toLowerCase().includes(term);
+          const matchDesc = p.description?.toLowerCase().includes(term);
+          if (!matchName && !matchBrand && !matchStud && !matchSku && !matchDesc) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price-asc') return a.price - b.price;
+        if (sortBy === 'price-desc') return b.price - a.price;
+        if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+        return b.id - a.id; // 'newest' default
+      });
+  }, [
+    products,
+    selectedStudType,
+    selectedCategory,
+    selectedBrand,
+    selectedSizeFilter,
+    priceRange,
+    searchTerm,
+    sortBy
+  ]);
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalCartPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -245,20 +326,42 @@ export default function CustomerPortal({
               Trải nghiệm các dòng giày đá bóng sân cỏ nhân tạo (TF), sân cỏ thật (FG) và áo đấu CLB hàng đầu thế giới từ Nike, Adidas, Puma và Mizuno.
             </p>
 
-            {/* Quick Guarantees */}
-            <div className="pt-2 flex flex-wrap gap-4 text-xs font-bold text-slate-300">
+            {/* Quick Guarantees & Size Guide Action */}
+            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-300">
               <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-lg border border-[#232a3b]">
                 <Truck size={14} className="text-[#e11d48]" /> Giao hàng 2-3 ngày
               </span>
               <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-lg border border-[#232a3b]">
                 <RotateCcw size={14} className="text-[#e11d48]" /> Đổi size miễn phí
               </span>
-              <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-lg border border-[#232a3b]">
-                <Trophy size={14} className="text-[#e11d48]" /> Cam kết chính hãng
-              </span>
+              <button
+                type="button"
+                onClick={() => setIsSizeGuideOpen(true)}
+                className="flex items-center gap-1.5 bg-[#e11d48]/20 hover:bg-[#e11d48] text-rose-300 hover:text-white px-3 py-1.5 rounded-lg border border-[#e11d48]/40 transition cursor-pointer"
+              >
+                <Ruler size={14} /> Bảng Hướng Dẫn Đo Size Bàn Chân
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Multi-Criteria Filter Bar (Day 4 Core Feature) */}
+        <ProductFilterBar
+          selectedStudType={selectedStudType}
+          setSelectedStudType={setSelectedStudType}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedBrand={selectedBrand}
+          setSelectedBrand={setSelectedBrand}
+          selectedSizeFilter={selectedSizeFilter}
+          setSelectedSizeFilter={setSelectedSizeFilter}
+          priceRange={priceRange}
+          setPriceRange={setPriceRange}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          activeFilterCount={activeFilterCount}
+          onResetFilters={handleResetFilters}
+        />
 
         {/* Section Heading & Result Counter */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#1a1f2b]">
@@ -269,22 +372,34 @@ export default function CustomerPortal({
                 ? `Giày Đá Bóng Đinh ${selectedStudType}`
                 : selectedCategory === 'kit'
                 ? 'Áo Đấu CLB & Đội Tuyển'
+                : selectedBrand
+                ? `Sản Phẩm Thương Hiệu ${selectedBrand}`
                 : 'Tất Cả Sản Phẩm Nổi Bật'}
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Hiển thị {filteredProducts.length} sản phẩm sẵn sàng giao ngay
+              Hiển thị {filteredProducts.length} sản phẩm phù hợp với bộ lọc
             </p>
           </div>
 
-          {currentUser && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsHistoryOpen(true)}
-              className="self-start sm:self-auto flex items-center gap-2 text-xs font-bold bg-[#141822] hover:bg-[#1b212f] text-slate-200 border border-[#232a3b] px-3.5 py-2 rounded-xl transition"
+              onClick={() => setIsSizeGuideOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-[#141822] hover:bg-[#1b212f] border border-[#232a3b] px-3 py-2 rounded-xl transition"
             >
-              <History size={15} className="text-[#e11d48]" />
-              <span>Xem Lịch Sử Mua Hàng</span>
+              <Ruler size={14} className="text-[#e11d48]" />
+              <span>Bảng Size Chuẩn</span>
             </button>
-          )}
+
+            {currentUser && (
+              <button
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-2 text-xs font-bold bg-[#141822] hover:bg-[#1b212f] text-slate-200 border border-[#232a3b] px-3.5 py-2 rounded-xl transition"
+              >
+                <History size={15} className="text-[#e11d48]" />
+                <span>Lịch Sử Mua Hàng</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Products Grid */}
@@ -292,16 +407,12 @@ export default function CustomerPortal({
           <div className="py-20 text-center space-y-3 bg-[#141822] rounded-2xl border border-[#232a3b]">
             <p className="text-4xl">⚽</p>
             <h3 className="font-bold text-white text-base">Không tìm thấy sản phẩm phù hợp!</h3>
-            <p className="text-xs text-slate-400">Hãy thử chọn bộ lọc khác hoặc tìm kiếm với từ khóa khác.</p>
+            <p className="text-xs text-slate-400">Hãy thử bỏ bớt điều kiện lọc hoặc chọn lại từ khóa khác.</p>
             <button
-              onClick={() => {
-                setSelectedCategory('');
-                setSelectedStudType('');
-                setSearchTerm('');
-              }}
+              onClick={handleResetFilters}
               className="mt-2 text-xs font-bold text-[#e11d48] hover:underline"
             >
-              Xem tất cả sản phẩm
+              Xóa tất cả bộ lọc & Xem toàn bộ sản phẩm
             </button>
           </div>
         ) : (
@@ -317,7 +428,11 @@ export default function CustomerPortal({
                 >
                   <div>
                     {/* Product Image Container */}
-                    <div className="relative aspect-4/3 overflow-hidden bg-[#0a0c10]">
+                    <div
+                      onClick={() => setDetailModalProduct(product)}
+                      className="relative aspect-4/3 overflow-hidden bg-[#0a0c10] cursor-pointer"
+                      title="Nhấn để xem chi tiết sản phẩm"
+                    >
                       <img
                         src={product.image_url || 'https://via.placeholder.com/400x300'}
                         alt={product.name}
@@ -349,12 +464,22 @@ export default function CustomerPortal({
                           {product.tier}
                         </span>
                       )}
+
+                      {/* Quick View Button Hover */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <span className="bg-[#141822]/90 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-[#232a3b] shadow-lg">
+                          <Eye size={14} className="text-[#e11d48]" /> Xem chi tiết
+                        </span>
+                      </div>
                     </div>
 
                     {/* Card Body */}
                     <div className="p-4 space-y-3">
                       <div>
-                        <h3 className="font-bold text-white text-sm line-clamp-1 group-hover:text-[#e11d48] transition">
+                        <h3
+                          onClick={() => setDetailModalProduct(product)}
+                          className="font-bold text-white text-sm line-clamp-1 group-hover:text-[#e11d48] transition cursor-pointer"
+                        >
                           {product.name}
                         </h3>
                         <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
@@ -666,6 +791,21 @@ export default function CustomerPortal({
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onLoginSuccess={onLoginSuccess}
+      />
+
+      {/* Size Guide Modal (Day 4 Core Feature) */}
+      <SizeGuideModal
+        isOpen={isSizeGuideOpen}
+        onClose={() => setIsSizeGuideOpen(false)}
+      />
+
+      {/* Product Detail Modal (Day 4 Core Feature) */}
+      <ProductDetailModal
+        product={detailModalProduct}
+        isOpen={!!detailModalProduct}
+        onClose={() => setDetailModalProduct(null)}
+        onAddToCart={addToCart}
+        onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
       />
 
       {/* Footer */}

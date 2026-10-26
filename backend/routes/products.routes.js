@@ -16,18 +16,28 @@ router.get('/categories', (req, res) => {
 
 /**
  * 2. GET /api/products - Lấy danh sách sản phẩm kèm Biến thể Size (Hỗ trợ lọc đa tiêu chí)
- * Query params: ?category_type=shoes|kit &stud_type=TF|FG|IC &brand=Nike|Adidas &search=...
+ * Query params: ?category_type=shoes|kit &stud_type=TF|FG|IC &brand=Nike|Adidas &search=... &min_price=... &max_price=... &size=... &sort=...
  */
 router.get('/products', (req, res) => {
-  const { category_type, stud_type, brand, category_id, search } = req.query;
+  const { category_type, stud_type, brand, category_id, search, min_price, max_price, size, sort } = req.query;
 
   let query = `
-    SELECT p.*, c.name AS category_name, c.slug AS category_slug
+    SELECT DISTINCT p.*, c.name AS category_name, c.slug AS category_slug
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
-    WHERE 1=1
   `;
+
+  if (size) {
+    query += ' INNER JOIN product_variants pv ON p.id = pv.product_id ';
+  }
+
+  query += ' WHERE 1=1 ';
   const params = [];
+
+  if (size) {
+    query += ' AND pv.size = ? AND pv.stock > 0';
+    params.push(size);
+  }
 
   if (category_type) {
     query += ' AND p.category_type = ?';
@@ -49,13 +59,31 @@ router.get('/products', (req, res) => {
     params.push(category_id);
   }
 
+  if (min_price) {
+    query += ' AND p.price >= ?';
+    params.push(Number(min_price));
+  }
+
+  if (max_price) {
+    query += ' AND p.price <= ?';
+    params.push(Number(max_price));
+  }
+
   if (search) {
     query += ' AND (p.name LIKE ? OR p.sku LIKE ? OR p.description LIKE ?)';
     const searchPattern = `%${search}%`;
     params.push(searchPattern, searchPattern, searchPattern);
   }
 
-  query += ' ORDER BY p.id DESC';
+  if (sort === 'price_asc') {
+    query += ' ORDER BY p.price ASC';
+  } else if (sort === 'price_desc') {
+    query += ' ORDER BY p.price DESC';
+  } else if (sort === 'name_asc') {
+    query += ' ORDER BY p.name ASC';
+  } else {
+    query += ' ORDER BY p.id DESC';
+  }
 
   db.all(query, params, (err, products) => {
     if (err) return res.status(500).json({ error: err.message });
