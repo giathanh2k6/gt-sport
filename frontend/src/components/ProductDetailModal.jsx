@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { X, ShoppingBag, CheckCircle, ShieldCheck, Truck, RotateCcw, Ruler, Flame, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, ShoppingBag, CheckCircle, ShieldCheck, Truck, RotateCcw, Ruler, Flame, Zap, ExternalLink } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function ProductDetailModal({
   product,
@@ -9,6 +11,7 @@ export default function ProductDetailModal({
   onOpenSizeGuide
 }) {
   const [selectedSize, setSelectedSize] = useState(null);
+  const toast = useToast();
 
   if (!isOpen || !product) return null;
 
@@ -21,7 +24,7 @@ export default function ProductDetailModal({
 
   const handleAdd = () => {
     if (!selectedSize) {
-      alert('⚠️ Vui lòng chọn một kích thước (Size) trước khi thêm vào giỏ hàng!');
+      toast.warning('⚠️ Vui lòng chọn một kích thước (Size) trước khi thêm vào giỏ hàng!');
       return;
     }
     onAddToCart(product, selectedSize);
@@ -59,7 +62,7 @@ export default function ProductDetailModal({
                 Đinh {product.stud_type}
               </span>
             ) : product.version_type ? (
-              <span className="bg-[#e11d48] text-white text-[11px] font-black tracking-wider px-2.5 py-1 rounded-md shadow-md uppercase">
+              <span className="bg-[#e11d48] text-white text-[11px] font-black tracking-wider px-2 py-0.5 rounded-md shadow-md uppercase">
                 Bản {product.version_type === 'player' ? 'Cầu Thủ' : 'Fan C1'}
               </span>
             ) : null}
@@ -69,17 +72,27 @@ export default function ProductDetailModal({
         {/* Right: Product Info & Actions */}
         <div className="md:w-1/2 p-6 flex flex-col justify-between overflow-y-auto space-y-5">
           <div className="space-y-4">
-            {/* Top close button */}
+            {/* Top close button & full page link */}
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                 SKU: <span className="text-white">{product.sku}</span>
               </span>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-lg bg-[#1b212f] hover:bg-rose-950/50 hover:text-rose-400 text-slate-400 flex items-center justify-center transition"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/product/${product.id}`}
+                  onClick={onClose}
+                  className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 bg-[#1b212f] px-2.5 py-1 rounded-lg transition"
+                  title="Mở toàn màn hình"
+                >
+                  <ExternalLink size={12} /> Xem trang riêng
+                </Link>
+                <button
+                  onClick={onClose}
+                  className="w-7 h-7 rounded-lg bg-[#1b212f] hover:bg-rose-950/50 hover:text-rose-400 text-slate-400 flex items-center justify-center transition"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Product Title & Price */}
@@ -158,7 +171,7 @@ export default function ProductDetailModal({
           <div className="pt-4 border-t border-[#232a3b]">
             <button
               onClick={handleAdd}
-              className="w-full bg-[#e11d48] hover:bg-rose-600 active:scale-95 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-xl shadow-rose-950/50"
+              className="w-full bg-[#e11d48] hover:bg-rose-600 active:scale-95 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-xl shadow-rose-950/50 cursor-pointer"
             >
               <ShoppingBag size={16} /> Thêm Vào Giỏ Hàng Ngay
             </button>

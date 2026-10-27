@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart,
   CheckCircle,
@@ -17,7 +18,8 @@ import {
   RotateCcw,
   ShieldAlert,
   Ruler,
-  Eye
+  Eye,
+  ArrowRight
 } from 'lucide-react';
 import axios from 'axios';
 import Navbar from './Navbar';
@@ -25,6 +27,7 @@ import AuthModal from './AuthModal';
 import ProductFilterBar from './ProductFilterBar';
 import SizeGuideModal from './SizeGuideModal';
 import ProductDetailModal from './ProductDetailModal';
+import { useToast } from '../context/ToastContext';
 
 export default function CustomerPortal({
   products,
@@ -35,10 +38,25 @@ export default function CustomerPortal({
   fetchOrders,
   fetchStats,
   onLoginSuccess,
-  onLogout
+  onLogout,
+  cart: parentCart,
+  setCart: setParentCart,
+  isCartOpen: parentIsCartOpen,
+  setIsCartOpen: setParentIsCartOpen,
+  addToCart: parentAddToCart
 }) {
-  const [cart, setCart] = useState([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  // Dùng state từ App nếu có, nếu không thì dùng fallback local state
+  const [localCart, setLocalCart] = useState([]);
+  const [localIsCartOpen, setLocalIsCartOpen] = useState(false);
+
+  const cart = parentCart !== undefined ? parentCart : localCart;
+  const setCart = setParentCart !== undefined ? setParentCart : setLocalCart;
+  const isCartOpen = parentIsCartOpen !== undefined ? parentIsCartOpen : localIsCartOpen;
+  const setIsCartOpen = setParentIsCartOpen !== undefined ? setParentIsCartOpen : setLocalIsCartOpen;
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
@@ -46,7 +64,7 @@ export default function CustomerPortal({
 
   const [customerOrders, setCustomerOrders] = useState([]);
 
-  // States bộ lọc đa tiêu chí (Day 4)
+  // States bộ lọc đa tiêu chí
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStudType, setSelectedStudType] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
@@ -112,7 +130,6 @@ export default function CustomerPortal({
     }
   };
 
-  // Đặt lại toàn bộ bộ lọc
   const handleResetFilters = () => {
     setSelectedCategory('');
     setSelectedStudType('');
@@ -121,9 +138,9 @@ export default function CustomerPortal({
     setPriceRange('all');
     setSortBy('newest');
     setSearchTerm('');
+    toast.info('Đã xóa bộ lọc và hiển thị tất cả sản phẩm!');
   };
 
-  // Tính số lượng bộ lọc đang hoạt động
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedStudType || selectedCategory) count++;
@@ -134,17 +151,23 @@ export default function CustomerPortal({
     return count;
   }, [selectedStudType, selectedCategory, selectedBrand, selectedSizeFilter, priceRange, searchTerm]);
 
-  // Thêm vào giỏ hàng
+  // Thêm vào giỏ hàng với Toast Notification
   const addToCart = (product, specificSize = null) => {
     const size = specificSize || selectedSize[product.id];
     if (!size) {
-      alert('⚠️ Vui lòng chọn Size (kích thước) trước khi thêm vào giỏ hàng!');
+      toast.warning('⚠️ Vui lòng chọn Kích thước (Size) trước khi thêm vào giỏ hàng!');
+      return;
+    }
+
+    if (parentAddToCart) {
+      parentAddToCart(product, size);
+      toast.success(`Đã thêm ${product.name} (Size ${size}) vào giỏ!`);
       return;
     }
 
     const variant = product.variants ? product.variants.find((v) => v.size === size) : null;
     if (!variant || variant.stock <= 0) {
-      alert(`❌ Size ${size} của mẫu "${product.name}" hiện tại đã hết hàng!`);
+      toast.error(`❌ Size ${size} của mẫu "${product.name}" hiện tại đã hết hàng!`);
       return;
     }
 
@@ -154,7 +177,7 @@ export default function CustomerPortal({
 
     if (existingIndex > -1) {
       if (cart[existingIndex].quantity >= variant.stock) {
-        alert(`⚠️ Trong kho chỉ còn ${variant.stock} sản phẩm size ${size}!`);
+        toast.warning(`⚠️ Trong kho chỉ còn ${variant.stock} sản phẩm size ${size}!`);
         return;
       }
       const updatedCart = [...cart];
@@ -176,6 +199,7 @@ export default function CustomerPortal({
         }
       ]);
     }
+    toast.success(`Đã thêm ${product.name} (Size ${size}) vào giỏ!`);
     setIsCartOpen(true);
   };
 
@@ -184,8 +208,9 @@ export default function CustomerPortal({
     const newQty = updated[index].quantity + delta;
     if (newQty <= 0) {
       updated.splice(index, 1);
+      toast.info('Đã xóa món đồ khỏi giỏ hàng.');
     } else if (newQty > updated[index].max_stock) {
-      alert(`⚠️ Rất tiếc, size này chỉ còn ${updated[index].max_stock} sản phẩm!`);
+      toast.warning(`⚠️ Rất tiếc, size này chỉ còn ${updated[index].max_stock} sản phẩm!`);
       return;
     } else {
       updated[index].quantity = newQty;
@@ -215,51 +240,39 @@ export default function CustomerPortal({
       if (fetchStats) fetchStats();
       if (currentUser) fetchUserHistory();
 
+      toast.success('🎉 Đặt hàng thành công! GT Sport sẽ liên hệ bạn sớm nhất.');
+
       setTimeout(() => {
         setOrderSuccess(false);
         setIsCartOpen(false);
       }, 3500);
     } catch (error) {
-      setOrderError(error.response?.data?.error || 'Lỗi khi gửi đơn hàng! Vui lòng thử lại.');
+      const errMsg = error.response?.data?.error || 'Lỗi khi gửi đơn hàng! Vui lòng thử lại.';
+      setOrderError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Lọc và Sắp xếp sản phẩm đa tiêu chí
+  // Lọc và Sắp xếp sản phẩm
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => {
-        // 1. Lọc theo stud_type (TF, FG, IC)
-        if (selectedStudType && p.stud_type !== selectedStudType) {
-          return false;
-        }
-
-        // 2. Lọc theo category_type (kit)
-        if (selectedCategory === 'kit' && p.category_type !== 'kit') {
-          return false;
-        }
-
-        // 3. Lọc theo Thương hiệu (Brand)
-        if (selectedBrand && p.brand?.toLowerCase() !== selectedBrand.toLowerCase()) {
-          return false;
-        }
-
-        // 4. Lọc theo Size khả dụng (variants có size và stock > 0)
+        if (selectedStudType && p.stud_type !== selectedStudType) return false;
+        if (selectedCategory === 'kit' && p.category_type !== 'kit') return false;
+        if (selectedBrand && p.brand?.toLowerCase() !== selectedBrand.toLowerCase()) return false;
         if (selectedSizeFilter) {
           const hasSizeInStock = p.variants?.some(
             (v) => v.size === selectedSizeFilter && v.stock > 0
           );
           if (!hasSizeInStock) return false;
         }
-
-        // 5. Lọc theo Khoảng giá
         if (priceRange === 'under-1m' && p.price >= 1000000) return false;
         if (priceRange === '1m-2m' && (p.price < 1000000 || p.price > 2000000)) return false;
         if (priceRange === '2m-3m' && (p.price <= 2000000 || p.price > 3000000)) return false;
         if (priceRange === 'over-3m' && p.price <= 3000000) return false;
 
-        // 6. Lọc theo từ khóa tìm kiếm
         if (searchTerm) {
           const term = searchTerm.toLowerCase();
           const matchName = p.name?.toLowerCase().includes(term);
@@ -276,7 +289,7 @@ export default function CustomerPortal({
         if (sortBy === 'price-asc') return a.price - b.price;
         if (sortBy === 'price-desc') return b.price - a.price;
         if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
-        return b.id - a.id; // 'newest' default
+        return b.id - a.id;
       });
   }, [
     products,
@@ -308,7 +321,7 @@ export default function CustomerPortal({
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
-        {/* Hero Banner - Predator Dark Aesthetic */}
+        {/* Hero Banner */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#141822] via-[#1a0f18] to-[#141822] border border-[#232a3b] p-8 md:p-12 shadow-2xl">
           <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-[#e11d48]/10 rounded-full blur-3xl pointer-events-none"></div>
           <div className="relative z-10 max-w-2xl space-y-4">
@@ -345,7 +358,7 @@ export default function CustomerPortal({
           </div>
         </div>
 
-        {/* Multi-Criteria Filter Bar (Day 4 Core Feature) */}
+        {/* Multi-Criteria Filter Bar */}
         <ProductFilterBar
           selectedStudType={selectedStudType}
           setSelectedStudType={setSelectedStudType}
@@ -428,17 +441,15 @@ export default function CustomerPortal({
                 >
                   <div>
                     {/* Product Image Container */}
-                    <div
-                      onClick={() => setDetailModalProduct(product)}
-                      className="relative aspect-4/3 overflow-hidden bg-[#0a0c10] cursor-pointer"
-                      title="Nhấn để xem chi tiết sản phẩm"
-                    >
-                      <img
-                        src={product.image_url || 'https://via.placeholder.com/400x300'}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
+                    <div className="relative aspect-4/3 overflow-hidden bg-[#0a0c10]">
+                      <Link to={`/product/${product.id}`} className="block w-full h-full">
+                        <img
+                          src={product.image_url || 'https://via.placeholder.com/400x300'}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      </Link>
 
                       {/* Brand Pill */}
                       {product.brand && (
@@ -466,22 +477,37 @@ export default function CustomerPortal({
                       )}
 
                       {/* Quick View Button Hover */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                        <span className="bg-[#141822]/90 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-[#232a3b] shadow-lg">
-                          <Eye size={14} className="text-[#e11d48]" /> Xem chi tiết
-                        </span>
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDetailModalProduct(product);
+                          }}
+                          className="pointer-events-auto bg-[#141822]/95 hover:bg-[#e11d48] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-[#232a3b] shadow-lg transition active:scale-95"
+                          title="Xem nhanh trong modal"
+                        >
+                          <Eye size={13} /> Xem nhanh
+                        </button>
+                        <Link
+                          to={`/product/${product.id}`}
+                          className="pointer-events-auto bg-[#e11d48] hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg transition active:scale-95"
+                        >
+                          Chi tiết <ArrowRight size={13} />
+                        </Link>
                       </div>
                     </div>
 
                     {/* Card Body */}
                     <div className="p-4 space-y-3">
                       <div>
-                        <h3
-                          onClick={() => setDetailModalProduct(product)}
-                          className="font-bold text-white text-sm line-clamp-1 group-hover:text-[#e11d48] transition cursor-pointer"
+                        <Link
+                          to={`/product/${product.id}`}
+                          className="font-bold text-white text-sm line-clamp-1 hover:text-[#e11d48] transition block"
                         >
                           {product.name}
-                        </h3>
+                        </Link>
                         <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
                           {product.description || 'Chính hãng • Đủ size khả dụng'}
                         </p>
@@ -793,13 +819,13 @@ export default function CustomerPortal({
         onLoginSuccess={onLoginSuccess}
       />
 
-      {/* Size Guide Modal (Day 4 Core Feature) */}
+      {/* Size Guide Modal */}
       <SizeGuideModal
         isOpen={isSizeGuideOpen}
         onClose={() => setIsSizeGuideOpen(false)}
       />
 
-      {/* Product Detail Modal (Day 4 Core Feature) */}
+      {/* Product Detail Modal */}
       <ProductDetailModal
         product={detailModalProduct}
         isOpen={!!detailModalProduct}
