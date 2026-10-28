@@ -206,7 +206,7 @@ function AppContent() {
         }
       />
 
-      {/* 2. Trang Chi Tiết Sản Phẩm Độc Lập (Day 5 - Full PDP) */}
+      {/* 2. Trang Chi Tiết Sản Phẩm Độc Lập (Day 5 & 6 - Full PDP with CartDrawer) */}
       <Route
         path="/product/:id"
         element={
@@ -219,6 +219,9 @@ function AppContent() {
             isCartOpen={isCartOpen}
             setIsCartOpen={setIsCartOpen}
             addToCart={addToCart}
+            fetchProducts={fetchProducts}
+            fetchOrders={fetchOrders}
+            fetchStats={fetchStats}
           />
         }
       />

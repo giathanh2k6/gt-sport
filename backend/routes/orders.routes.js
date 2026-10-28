@@ -37,22 +37,36 @@ router.get('/orders/user/:userId', authenticateToken, (req, res) => {
  * 3. POST /api/orders - Tạo đơn hàng & Tự động trừ tồn kho (Chống âm kho - Atomic Transaction)
  */
 router.post('/orders', optionalAuth, (req, res) => {
-  const { user_id, customer_name, customer_phone, customer_address, items } = req.body;
+  const {
+    user_id,
+    customer_name,
+    customer_phone,
+    customer_address,
+    items,
+    payment_method,
+    note,
+    discount_amount
+  } = req.body;
 
   if (!customer_name || !customer_phone || !customer_address || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Thông tin người nhận và giỏ hàng không được để trống!' });
   }
 
   // 1. Tính tổng giá trị đơn hàng
-  let totalPrice = 0;
+  let calculatedSubtotal = 0;
   for (const item of items) {
     if (!item.product_id || !item.size || !item.quantity || item.quantity <= 0) {
       return res.status(400).json({ error: 'Thông tin sản phẩm trong giỏ hàng không hợp lệ!' });
     }
-    totalPrice += item.price * item.quantity;
+    calculatedSubtotal += item.price * item.quantity;
   }
 
+  const validDiscount = Number(discount_amount) > 0 ? Number(discount_amount) : 0;
+  const finalPrice = Math.max(0, calculatedSubtotal - validDiscount);
+
   const finalUserId = req.user ? req.user.id : (user_id || null);
+  const finalPaymentMethod = payment_method === 'vietqr' ? 'vietqr' : 'cod';
+  const finalNote = note || '';
 
   // 2. KIỂM TRA TỒN KHO TRƯỚC KHI TRỪ (CHỐNG BÁN KHỐNG / OVERSOLD)
   let checkCount = 0;
@@ -89,15 +103,29 @@ router.post('/orders', optionalAuth, (req, res) => {
           db.run('BEGIN TRANSACTION');
 
           const sqlOrder = `
-            INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, total_price, status) 
-            VALUES (?, ?, ?, ?, ?, 'pending')
+            INSERT INTO orders (
+              user_id, customer_name, customer_phone, customer_address, total_price, status, payment_method, note, discount_amount
+            ) 
+            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)
           `;
 
-          db.run(sqlOrder, [finalUserId, customer_name, customer_phone, customer_address, totalPrice], function (errOrder) {
-            if (errOrder) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'Lỗi tạo đơn hàng: ' + errOrder.message });
-            }
+          db.run(
+            sqlOrder,
+            [
+              finalUserId,
+              customer_name,
+              customer_phone,
+              customer_address,
+              finalPrice,
+              finalPaymentMethod,
+              finalNote,
+              validDiscount
+            ],
+            function (errOrder) {
+              if (errOrder) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ error: 'Lỗi tạo đơn hàng: ' + errOrder.message });
+              }
 
             const orderId = this.lastID;
             const stmtItem = db.prepare('INSERT INTO order_items (order_id, product_id, size, quantity, price) VALUES (?, ?, ?, ?, ?)');

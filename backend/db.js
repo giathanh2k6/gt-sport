@@ -95,10 +95,25 @@ db.serialize(() => {
       customer_address TEXT NOT NULL,
       total_price INTEGER NOT NULL,
       status TEXT DEFAULT 'pending', -- pending, confirmed, shipping, completed, cancelled
+      payment_method TEXT DEFAULT 'cod', -- 'cod' hoặc 'vietqr'
+      note TEXT,
+      discount_amount INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // Migration an toàn cho bảng orders nếu database cũ chưa có cột mới
+  const newOrderColumns = [
+    { name: 'payment_method', type: "TEXT DEFAULT 'cod'" },
+    { name: 'note', type: 'TEXT' },
+    { name: 'discount_amount', type: 'INTEGER DEFAULT 0' }
+  ];
+  newOrderColumns.forEach((col) => {
+    db.run(`ALTER TABLE orders ADD COLUMN ${col.name} ${col.type}`, () => {
+      // Bỏ qua nếu cột đã tồn tại
+    });
+  });
 
   // 6. Bảng Chi Tiết Đơn Hàng (Order Items)
   db.run(`

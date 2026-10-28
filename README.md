@@ -141,7 +141,7 @@ Sau khi chạy backend, hệ thống đã nạp sẵn 2 tài khoản mẫu:
 - [x] **Ngày 3:** Thiết lập Design System thể thao Đen Than - Đỏ Crimson (Pitch Black / Crimson) & Hệ thống định tuyến React Router chuyên nghiệp.
 - [x] **Ngày 4:** Xây dựng bộ lọc đa tiêu chí chuẩn E-commerce thể thao (Lọc theo mặt sân TF/FG/IC, áo đấu, thương hiệu, size còn hàng, khoảng giá & sắp xếp). Tích hợp Bảng hướng dẫn đo size bàn chân và Modal xem nhanh chi tiết sản phẩm.
 - [x] **Ngày 5:** Trang chi tiết sản phẩm chuyên sâu (PDP tại route `/product/:id`), bộ chọn size thông minh cảnh báo khan hiếm tồn kho, gợi ý sản phẩm tương tự & Hệ thống Toast Notifications mượt mà thay thế alert() cổ điển.
-- [ ] **Ngày 6:** Tối ưu Giỏ hàng trượt (Slide-over Cart Drawer) & Lưu giỏ hàng LocalStorage.
+- [x] **Ngày 6:** Giỏ hàng trượt chuyên nghiệp (Slide-over Cart Drawer), thanh tiến trình Miễn phí vận chuyển, hệ thống Voucher giảm giá, thanh toán COD & chuyển khoản VietQR tự động, lưu trữ bền vững LocalStorage và hoạt ảnh động High-Tech Sport (Stadium Glow, Card Hover Glow, Button Shine).
 - [ ] **Ngày 7:** Tách nhỏ và tối ưu trang Admin Dashboard thành các component độc lập.
 - [ ] **Bonus:** Tích hợp tính năng In tên số áo đấu trực quan / Mô hình 3D xoay 360 độ.
 

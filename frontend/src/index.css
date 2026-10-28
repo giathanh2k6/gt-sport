@@ -23,15 +23,30 @@
   }
 }
 
-/* Animations mượt mà cho Toast và Modal */
+/* ========================================================
+   🏃‍♂️ SPORT HIGH-TECH ANIMATIONS & MICRO-INTERACTIONS (Day 6)
+   ======================================================== */
+
+/* 1. Slide-in & Fade Animations */
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(100%) scale(0.95);
+    transform: translateX(100%) scale(0.96);
   }
   to {
     opacity: 1;
     transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -46,12 +61,92 @@
   }
 }
 
+/* 2. Stadium Ambient Glow (Ánh sáng sân vận động thở nhẹ) */
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.08);
+  }
+}
+
+/* 3. Button Shine Sweep (Vệt sáng trượt ngang qua nút CTA) */
+@keyframes shineSweep {
+  0% {
+    left: -100%;
+  }
+  20%, 100% {
+    left: 200%;
+  }
+}
+
+/* 4. Subtle Float Effect */
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Helper Animation Classes */
 .animate-slide-in {
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fadeIn {
   animation: fadeIn 0.25s ease-out forwards;
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: floatGentle 3s ease-in-out infinite;
+}
+
+/* Nút bấm có hiệu ứng vệt sáng lướt qua (High-Tech Sport Button) */
+.btn-shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: shineSweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Thẻ sản phẩm có viền bừng sáng Crimson khi rê chuột */
+.hover-glow-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-glow-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(225, 29, 72, 0.7);
+  box-shadow: 0 16px 32px -8px rgba(225, 29, 72, 0.2), 0 0 1px 1px rgba(225, 29, 72, 0.4);
 }
 
 /* Thanh cuộn phong cách thể thao High-Tech */

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Navbar from './Navbar';
 import SizeGuideModal from './SizeGuideModal';
+import CartDrawer from './CartDrawer';
 import { useToast } from '../context/ToastContext';
 
 export default function ProductDetailPage({
@@ -31,7 +32,10 @@ export default function ProductDetailPage({
   setCart,
   isCartOpen,
   setIsCartOpen,
-  addToCart
+  addToCart,
+  fetchProducts,
+  fetchOrders,
+  fetchStats
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -385,7 +389,7 @@ export default function ProductDetailPage({
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="flex-1 bg-[#e11d48] hover:bg-rose-600 text-white font-black py-3.5 px-4 rounded-2xl shadow-xl shadow-rose-950/60 transition flex items-center justify-center gap-2 text-xs uppercase tracking-wider active:scale-95 cursor-pointer"
+                  className="flex-1 bg-[#e11d48] hover:bg-rose-600 text-white font-black py-3.5 px-4 rounded-2xl shadow-xl shadow-rose-950/60 transition flex items-center justify-center gap-2 text-xs uppercase tracking-wider active:scale-95 cursor-pointer btn-shine-sweep"
                 >
                   <Zap size={17} />
                   <span>Mua Ngay</span>
@@ -489,6 +493,19 @@ export default function ProductDetailPage({
       <SizeGuideModal
         isOpen={isSizeGuideOpen}
         onClose={() => setIsSizeGuideOpen(false)}
+      />
+
+      {/* CartDrawer Slide-Over (Day 6 Feature) */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        setCart={setCart}
+        currentUser={currentUser}
+        fetchProducts={fetchProducts}
+        fetchOrders={fetchOrders}
+        fetchStats={fetchStats}
+        onOpenAuth={onOpenAuth}
       />
 
       {/* Footer */}

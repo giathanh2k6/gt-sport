@@ -19,7 +19,8 @@ import {
   ShieldAlert,
   Ruler,
   Eye,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import axios from 'axios';
 import Navbar from './Navbar';
@@ -27,6 +28,7 @@ import AuthModal from './AuthModal';
 import ProductFilterBar from './ProductFilterBar';
 import SizeGuideModal from './SizeGuideModal';
 import ProductDetailModal from './ProductDetailModal';
+import CartDrawer from './CartDrawer';
 import { useToast } from '../context/ToastContext';
 
 export default function CustomerPortal({
@@ -74,24 +76,9 @@ export default function CustomerPortal({
   const [searchTerm, setSearchTerm] = useState('');
 
   const [selectedSize, setSelectedSize] = useState({});
-  const [orderSuccess, setOrderSuccess] = useState(false);
-  const [orderError, setOrderError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Customer Delivery Form
-  const [customerInfo, setCustomerInfo] = useState({
-    name: currentUser ? currentUser.name : '',
-    phone: currentUser ? currentUser.phone || '' : '',
-    address: ''
-  });
 
   useEffect(() => {
     if (currentUser) {
-      setCustomerInfo((prev) => ({
-        ...prev,
-        name: currentUser.name || prev.name,
-        phone: currentUser.phone || prev.phone
-      }));
       fetchUserHistory();
     }
   }, [currentUser]);
@@ -151,7 +138,7 @@ export default function CustomerPortal({
     return count;
   }, [selectedStudType, selectedCategory, selectedBrand, selectedSizeFilter, priceRange, searchTerm]);
 
-  // Thêm vào giỏ hàng với Toast Notification
+  // Thêm vào giỏ hàng
   const addToCart = (product, specificSize = null) => {
     const size = specificSize || selectedSize[product.id];
     if (!size) {
@@ -203,58 +190,6 @@ export default function CustomerPortal({
     setIsCartOpen(true);
   };
 
-  const updateQuantity = (index, delta) => {
-    const updated = [...cart];
-    const newQty = updated[index].quantity + delta;
-    if (newQty <= 0) {
-      updated.splice(index, 1);
-      toast.info('Đã xóa món đồ khỏi giỏ hàng.');
-    } else if (newQty > updated[index].max_stock) {
-      toast.warning(`⚠️ Rất tiếc, size này chỉ còn ${updated[index].max_stock} sản phẩm!`);
-      return;
-    } else {
-      updated[index].quantity = newQty;
-    }
-    setCart(updated);
-  };
-
-  const handleCheckout = async (e) => {
-    e.preventDefault();
-    if (cart.length === 0) return;
-    setOrderError('');
-    setIsSubmitting(true);
-
-    try {
-      await axios.post('/api/orders', {
-        user_id: currentUser ? currentUser.id : null,
-        customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone,
-        customer_address: customerInfo.address,
-        items: cart
-      });
-
-      setOrderSuccess(true);
-      setCart([]);
-      fetchProducts();
-      if (fetchOrders) fetchOrders();
-      if (fetchStats) fetchStats();
-      if (currentUser) fetchUserHistory();
-
-      toast.success('🎉 Đặt hàng thành công! GT Sport sẽ liên hệ bạn sớm nhất.');
-
-      setTimeout(() => {
-        setOrderSuccess(false);
-        setIsCartOpen(false);
-      }, 3500);
-    } catch (error) {
-      const errMsg = error.response?.data?.error || 'Lỗi khi gửi đơn hàng! Vui lòng thử lại.';
-      setOrderError(errMsg);
-      toast.error(errMsg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Lọc và Sắp xếp sản phẩm
   const filteredProducts = useMemo(() => {
     return products
@@ -303,7 +238,6 @@ export default function CustomerPortal({
   ]);
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalCartPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-slate-100 flex flex-col justify-between selection:bg-[#e11d48] selection:text-white">
@@ -321,18 +255,23 @@ export default function CustomerPortal({
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
-        {/* Hero Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#141822] via-[#1a0f18] to-[#141822] border border-[#232a3b] p-8 md:p-12 shadow-2xl">
-          <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-[#e11d48]/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 bg-[#e11d48]/20 border border-[#e11d48]/40 px-3.5 py-1 rounded-full text-xs font-black tracking-wide text-rose-300 uppercase">
+        {/* Hero Banner với hiệu ứng Stadium Glow Pulse & Slide Up */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#141822] via-[#1a0f18] to-[#141822] border border-[#232a3b] p-8 md:p-12 shadow-2xl animate-fadeIn">
+          {/* Vùng sáng đỏ sân vận động thở nhẹ (Stadium Ambient Glow) */}
+          <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-[#e11d48]/20 rounded-full blur-3xl pointer-events-none animate-glow-pulse"></div>
+          <div className="absolute -left-20 -top-20 w-80 h-80 bg-rose-900/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="relative z-10 max-w-2xl space-y-4 animate-slide-up">
+            <div className="inline-flex items-center gap-2 bg-[#e11d48]/20 border border-[#e11d48]/40 px-3.5 py-1 rounded-full text-xs font-black tracking-wide text-rose-300 uppercase shadow-lg shadow-rose-950/40">
               <Flame size={14} className="text-[#e11d48] animate-pulse" />
               <span>BST MỚI 2024/25 • CHÍNH HÃNG 100%</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter uppercase text-white leading-tight">
               TỐC ĐỘ. SỨC MẠNH. <br />
-              <span className="text-[#e11d48]">CHINH PHỤC SÂN CỎ.</span>
+              <span className="text-[#e11d48] bg-gradient-to-r from-[#e11d48] to-rose-400 bg-clip-text text-transparent">
+                CHINH PHỤC SÂN CỎ.
+              </span>
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed">
@@ -341,18 +280,18 @@ export default function CustomerPortal({
 
             {/* Quick Guarantees & Size Guide Action */}
             <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-300">
-              <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-lg border border-[#232a3b]">
+              <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-xl border border-[#232a3b] hover:border-slate-500 transition">
                 <Truck size={14} className="text-[#e11d48]" /> Giao hàng 2-3 ngày
               </span>
-              <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-lg border border-[#232a3b]">
+              <span className="flex items-center gap-1.5 bg-[#0a0c10]/80 px-3 py-1.5 rounded-xl border border-[#232a3b] hover:border-slate-500 transition">
                 <RotateCcw size={14} className="text-[#e11d48]" /> Đổi size miễn phí
               </span>
               <button
                 type="button"
                 onClick={() => setIsSizeGuideOpen(true)}
-                className="flex items-center gap-1.5 bg-[#e11d48]/20 hover:bg-[#e11d48] text-rose-300 hover:text-white px-3 py-1.5 rounded-lg border border-[#e11d48]/40 transition cursor-pointer"
+                className="flex items-center gap-1.5 bg-[#e11d48]/20 hover:bg-[#e11d48] text-rose-300 hover:text-white px-3 py-1.5 rounded-xl border border-[#e11d48]/40 transition cursor-pointer shadow-md"
               >
-                <Ruler size={14} /> Bảng Hướng Dẫn Đo Size Bàn Chân
+                <Ruler size={14} /> Bảng Hướng Dẫn Đo Size Chân
               </button>
             </div>
           </div>
@@ -380,7 +319,7 @@ export default function CustomerPortal({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#1a1f2b]">
           <div>
             <h2 className="text-xl sm:text-2xl font-black italic uppercase text-white flex items-center gap-2">
-              <Zap size={20} className="text-[#e11d48]" />
+              <Zap size={20} className="text-[#e11d48] animate-bounce" />
               {selectedStudType
                 ? `Giày Đá Bóng Đinh ${selectedStudType}`
                 : selectedCategory === 'kit'
@@ -415,10 +354,10 @@ export default function CustomerPortal({
           </div>
         </div>
 
-        {/* Products Grid */}
+        {/* Products Grid với hiệu ứng hover-glow-card */}
         {filteredProducts.length === 0 ? (
-          <div className="py-20 text-center space-y-3 bg-[#141822] rounded-2xl border border-[#232a3b]">
-            <p className="text-4xl">⚽</p>
+          <div className="py-20 text-center space-y-3 bg-[#141822] rounded-3xl border border-[#232a3b] animate-fadeIn">
+            <p className="text-4xl animate-float">⚽</p>
             <h3 className="font-bold text-white text-base">Không tìm thấy sản phẩm phù hợp!</h3>
             <p className="text-xs text-slate-400">Hãy thử bỏ bớt điều kiện lọc hoặc chọn lại từ khóa khác.</p>
             <button
@@ -437,7 +376,7 @@ export default function CustomerPortal({
               return (
                 <div
                   key={product.id}
-                  className="group bg-[#141822] border border-[#232a3b] hover:border-[#e11d48]/70 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-rose-950/20 transition-all duration-300 flex flex-col justify-between"
+                  className="group bg-[#141822] border border-[#232a3b] rounded-3xl overflow-hidden shadow-lg hover-glow-card flex flex-col justify-between"
                 >
                   <div>
                     {/* Product Image Container */}
@@ -446,7 +385,7 @@ export default function CustomerPortal({
                         <img
                           src={product.image_url || 'https://via.placeholder.com/400x300'}
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-110 group-hover:rotate-1 transition-transform duration-500"
                           loading="lazy"
                         />
                       </Link>
@@ -477,7 +416,7 @@ export default function CustomerPortal({
                       )}
 
                       {/* Quick View Button Hover */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -559,12 +498,12 @@ export default function CustomerPortal({
                     </div>
                   </div>
 
-                  {/* Add to Cart CTA */}
+                  {/* Add to Cart CTA với hiệu ứng btn-shine-sweep */}
                   <div className="p-4 pt-0">
                     <button
                       type="button"
                       onClick={() => addToCart(product)}
-                      className="w-full bg-[#1b212f] hover:bg-[#e11d48] text-white font-black text-xs py-2.5 rounded-xl border border-[#232a3b] hover:border-[#e11d48] transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-rose-900/30 active:scale-[0.98] cursor-pointer"
+                      className="w-full bg-[#1b212f] hover:bg-[#e11d48] text-white font-black text-xs py-2.5 rounded-xl border border-[#232a3b] hover:border-[#e11d48] transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-rose-900/30 active:scale-[0.98] cursor-pointer btn-shine-sweep"
                     >
                       <ShoppingCart size={15} />
                       <span>THÊM VÀO GIỎ</span>
@@ -577,177 +516,22 @@ export default function CustomerPortal({
         )}
       </main>
 
-      {/* Slide-over Cart Drawer */}
-      {isCartOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-end z-50 animate-fade-in">
-          <div className="bg-[#141822] border-l border-[#232a3b] w-full max-w-md h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
-            <div>
-              {/* Drawer Header */}
-              <div className="flex justify-between items-center pb-4 border-b border-[#232a3b] mb-4">
-                <h3 className="font-black italic uppercase text-white text-base flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-[#e11d48]" />
-                  <span>Giỏ Hàng Của Bạn</span>
-                  <span className="text-xs bg-[#e11d48] px-2 py-0.5 rounded-full text-white font-bold ml-1">
-                    {totalCartCount}
-                  </span>
-                </h3>
-                <button
-                  onClick={() => setIsCartOpen(false)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-[#1b212f] transition"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {orderSuccess ? (
-                <div className="py-16 text-center space-y-4">
-                  <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/40 animate-bounce">
-                    <CheckCircle size={36} />
-                  </div>
-                  <h4 className="font-black text-white text-xl uppercase">Đặt Hàng Thành Công!</h4>
-                  <p className="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
-                    Đơn hàng đã được lưu và trừ kho an toàn. Nhân viên GT Sport sẽ liên hệ bạn sớm nhất để xác nhận giao hàng!
-                  </p>
-                </div>
-              ) : cart.length === 0 ? (
-                <div className="py-20 text-center space-y-3">
-                  <p className="text-4xl">🛒</p>
-                  <p className="text-sm font-bold text-slate-400">Giỏ hàng của bạn đang trống.</p>
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    className="text-xs font-bold text-[#e11d48] hover:underline"
-                  >
-                    Tiếp tục mua sắm ngay
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Cart Items List */}
-                  <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
-                    {cart.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-3 bg-[#0a0c10] border border-[#232a3b] p-3 rounded-xl"
-                      >
-                        <img
-                          src={item.image_url}
-                          alt={item.name}
-                          className="w-14 h-14 object-cover rounded-lg border border-[#232a3b]"
-                        />
-                        <div className="flex-1 text-xs">
-                          <p className="font-bold text-white line-clamp-1">{item.name}</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
-                            Size:{' '}
-                            <strong className="text-[#e11d48] font-bold">{item.size}</strong>
-                          </p>
-                          <div className="font-black text-[#e11d48] mt-1">
-                            {formatCurrency(item.price)}
-                          </div>
-                        </div>
-
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-1.5 bg-[#141822] border border-[#232a3b] rounded-lg px-2 py-1">
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(idx, -1)}
-                            className="text-slate-400 hover:text-white font-bold px-1"
-                          >
-                            -
-                          </button>
-                          <span className="text-xs font-bold text-white px-1.5">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(idx, 1)}
-                            className="text-slate-400 hover:text-white font-bold px-1"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Total Price Summary */}
-                  <div className="pt-3 border-t border-[#232a3b] flex justify-between items-center text-sm">
-                    <span className="font-bold text-slate-300">Tổng thanh toán:</span>
-                    <span className="text-xl font-black text-[#e11d48]">
-                      {formatCurrency(totalCartPrice)}
-                    </span>
-                  </div>
-
-                  {orderError && (
-                    <div className="p-3 bg-rose-950/70 border border-rose-800 text-rose-300 text-xs rounded-xl flex items-center gap-2">
-                      <ShieldAlert size={16} className="text-rose-400 flex-shrink-0" />
-                      <span>{orderError}</span>
-                    </div>
-                  )}
-
-                  {/* Delivery Form */}
-                  <form onSubmit={handleCheckout} className="space-y-3 pt-3 border-t border-[#232a3b] text-xs">
-                    <h4 className="font-black uppercase tracking-wider text-slate-300 text-xs">
-                      Thông Tin Giao Hàng:
-                    </h4>
-
-                    {!currentUser && (
-                      <div className="p-2.5 bg-amber-950/40 border border-amber-800 text-amber-300 rounded-xl flex items-center justify-between text-[11px]">
-                        <span>Đăng nhập để tự động điền và tích lũy điểm!</span>
-                        <button
-                          type="button"
-                          onClick={() => setIsAuthOpen(true)}
-                          className="font-black text-[#e11d48] underline ml-2"
-                        >
-                          Đăng nhập
-                        </button>
-                      </div>
-                    )}
-
-                    <input
-                      type="text"
-                      required
-                      placeholder="Họ và tên người nhận *"
-                      value={customerInfo.name}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                      className="w-full bg-[#0a0c10] border border-[#232a3b] rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#e11d48]"
-                    />
-
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Số điện thoại nhận hàng *"
-                      value={customerInfo.phone}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                      className="w-full bg-[#0a0c10] border border-[#232a3b] rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#e11d48]"
-                    />
-
-                    <textarea
-                      required
-                      rows={2}
-                      placeholder="Địa chỉ nhận hàng chi tiết (Số nhà, đường, phường/xã, quận/huyện) *"
-                      value={customerInfo.address}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                      className="w-full bg-[#0a0c10] border border-[#232a3b] rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#e11d48]"
-                    ></textarea>
-
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-3 bg-[#e11d48] hover:bg-[#ff2442] active:scale-[0.99] text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-lg shadow-rose-900/40 transition disabled:opacity-50 cursor-pointer"
-                    >
-                      {isSubmitting ? 'ĐANG XỬ LÝ ĐƠN HÀNG...' : `XÁC NHẬN ĐẶT HÀNG (${formatCurrency(totalCartPrice)})`}
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* CartDrawer Slide-Over Độc Lập (Day 6 Feature) */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        setCart={setCart}
+        currentUser={currentUser}
+        fetchProducts={fetchProducts}
+        fetchOrders={fetchOrders}
+        fetchStats={fetchStats}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
 
       {/* Order History Modal */}
       {isHistoryOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-[#141822] border border-[#232a3b] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 text-white">
             <div className="flex justify-between items-center pb-3 border-b border-[#232a3b] mb-4">
               <h3 className="font-black italic uppercase text-base flex items-center gap-2">
@@ -800,6 +584,11 @@ export default function CustomerPortal({
                         {o.customer_phone}
                       </p>
                       <p>Địa chỉ: {o.customer_address}</p>
+                      {o.payment_method && (
+                        <p className="text-[11px] text-slate-500">
+                          Thanh toán: <strong className="text-white">{o.payment_method === 'vietqr' ? 'Chuyển khoản VietQR' : 'Tiền mặt khi nhận hàng (COD)'}</strong>
+                        </p>
+                      )}
                       <p className="font-black text-[#e11d48] text-sm pt-1">
                         Tổng tiền: {formatCurrency(o.total_price)}
                       </p>
