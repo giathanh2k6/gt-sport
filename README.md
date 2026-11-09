@@ -142,7 +142,7 @@ Sau khi chạy backend, hệ thống đã nạp sẵn 2 tài khoản mẫu:
 - [x] **Ngày 4:** Xây dựng bộ lọc đa tiêu chí chuẩn E-commerce thể thao (Lọc theo mặt sân TF/FG/IC, áo đấu, thương hiệu, size còn hàng, khoảng giá & sắp xếp). Tích hợp Bảng hướng dẫn đo size bàn chân và Modal xem nhanh chi tiết sản phẩm.
 - [x] **Ngày 5:** Trang chi tiết sản phẩm chuyên sâu (PDP tại route `/product/:id`), bộ chọn size thông minh cảnh báo khan hiếm tồn kho, gợi ý sản phẩm tương tự & Hệ thống Toast Notifications mượt mà thay thế alert() cổ điển.
 - [x] **Ngày 6:** Giỏ hàng trượt chuyên nghiệp (Slide-over Cart Drawer), thanh tiến trình Miễn phí vận chuyển, hệ thống Voucher giảm giá, thanh toán COD & chuyển khoản VietQR tự động, lưu trữ bền vững LocalStorage và hoạt ảnh động High-Tech Sport (Stadium Glow, Card Hover Glow, Button Shine).
-- [ ] **Ngày 7:** Tách nhỏ và tối ưu trang Admin Dashboard thành các component độc lập.
+- [x] **Ngày 7:** Tinh gọn và tái cấu trúc toàn diện Cổng Quản Trị Admin (Modular Admin Dashboard). Tách file nguyên khối 856 dòng thành các module độc lập (`AdminSidebar`, `DashboardOverview`, `OrderManager`, `OrderDetailModal`, `ProductManager`, `ProductFormModal`). Bổ sung lọc đơn hàng đa năng theo trạng thái & thanh toán (COD/VietQR), xem chi tiết các mặt hàng trong đơn kèm size/ảnh, nâng cấp modal thêm sản phẩm hỗ trợ đinh TF/FG/IC, preset size thông minh và đồng bộ thông báo Toast.
 - [ ] **Bonus:** Tích hợp tính năng In tên số áo đấu trực quan / Mô hình 3D xoay 360 độ.
 
 ---

@@ -179,4 +179,21 @@ router.put('/orders/:id/status', authenticateToken, requireAdmin, (req, res) => 
   });
 });
 
+/**
+ * 5. GET /api/orders/:id/items - Lấy chi tiết các sản phẩm trong đơn hàng
+ */
+router.get('/orders/:id/items', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const sql = `
+    SELECT oi.*, p.name AS product_name, p.image_url, p.sku, p.brand, p.stud_type
+    FROM order_items oi
+    LEFT JOIN products p ON oi.product_id = p.id
+    WHERE oi.order_id = ?
+  `;
+  db.all(sql, [id], (err, items) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(items);
+  });
+});
+
 module.exports = router;
