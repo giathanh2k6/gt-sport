@@ -142,8 +142,7 @@ Sau khi chạy backend, hệ thống đã nạp sẵn 2 tài khoản mẫu:
 - [x] **Ngày 4:** Xây dựng bộ lọc đa tiêu chí chuẩn E-commerce thể thao (Lọc theo mặt sân TF/FG/IC, áo đấu, thương hiệu, size còn hàng, khoảng giá & sắp xếp). Tích hợp Bảng hướng dẫn đo size bàn chân và Modal xem nhanh chi tiết sản phẩm.
 - [x] **Ngày 5:** Trang chi tiết sản phẩm chuyên sâu (PDP tại route `/product/:id`), bộ chọn size thông minh cảnh báo khan hiếm tồn kho, gợi ý sản phẩm tương tự & Hệ thống Toast Notifications mượt mà thay thế alert() cổ điển.
 - [x] **Ngày 6:** Giỏ hàng trượt chuyên nghiệp (Slide-over Cart Drawer), thanh tiến trình Miễn phí vận chuyển, hệ thống Voucher giảm giá, thanh toán COD & chuyển khoản VietQR tự động, lưu trữ bền vững LocalStorage và hoạt ảnh động High-Tech Sport (Stadium Glow, Card Hover Glow, Button Shine).
-- [x] **Ngày 7:** Tinh gọn và tái cấu trúc toàn diện Cổng Quản Trị Admin (Modular Admin Dashboard). Tách file nguyên khối 856 dòng thành các module độc lập (`AdminSidebar`, `DashboardOverview`, `OrderManager`, `OrderDetailModal`, `ProductManager`, `ProductFormModal`). Bổ sung lọc đơn hàng đa năng theo trạng thái & thanh toán (COD/VietQR), xem chi tiết các mặt hàng trong đơn kèm size/ảnh, nâng cấp modal thêm sản phẩm hỗ trợ đinh TF/FG/IC, preset size thông minh và đồng bộ thông báo Toast.
-- [ ] **Bonus:** Tích hợp tính năng In tên số áo đấu trực quan / Mô hình 3D xoay 360 độ.
+- [x] **Bonus Signature:** Tích hợp Studio Thiết Kế Áo Đấu Trực Tuyến 3D (Interactive Kit Customizer 3D & 360° Rotation Viewer). Cho phép khách hàng tự do nhập tên số tùy thích (hoặc chọn nhanh cầu thủ Ronaldo, Messi, Bellingham, Quang Hải...), chọn Font thi đấu (UCL Cúp C1, Premier League, Classic), đổi màu viền in số, dán huy hiệu giải đấu (Badge Cúp C1 15 Stars, Premier League). Trải nghiệm xoay áo 360° bằng kéo rê chuột hoặc lật 180° mượt mà; tự động tính phụ phí in ấn, lưu vào giỏ hàng và đồng bộ dữ liệu tới Cổng Quản Trị Admin.
 
 ---
 

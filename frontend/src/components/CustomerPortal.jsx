@@ -29,6 +29,7 @@ import ProductFilterBar from './ProductFilterBar';
 import SizeGuideModal from './SizeGuideModal';
 import ProductDetailModal from './ProductDetailModal';
 import CartDrawer from './CartDrawer';
+import KitCustomizerModal from './KitCustomizerModal';
 import { useToast } from '../context/ToastContext';
 
 export default function CustomerPortal({
@@ -63,6 +64,7 @@ export default function CustomerPortal({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [detailModalProduct, setDetailModalProduct] = useState(null);
+  const [customizerProduct, setCustomizerProduct] = useState(null);
 
   const [customerOrders, setCustomerOrders] = useState([]);
 
@@ -499,7 +501,7 @@ export default function CustomerPortal({
                   </div>
 
                   {/* Add to Cart CTA với hiệu ứng btn-shine-sweep */}
-                  <div className="p-4 pt-0">
+                  <div className="p-4 pt-0 space-y-2">
                     <button
                       type="button"
                       onClick={() => addToCart(product)}
@@ -508,6 +510,17 @@ export default function CustomerPortal({
                       <ShoppingCart size={15} />
                       <span>THÊM VÀO GIỎ</span>
                     </button>
+
+                    {isKit && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomizerProduct(product)}
+                        className="w-full bg-gradient-to-r from-rose-950/60 to-amber-950/60 hover:from-[#e11d48] hover:to-rose-700 text-rose-300 hover:text-white font-bold text-[11px] py-1.5 rounded-xl border border-[#e11d48]/40 hover:border-[#e11d48] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                      >
+                        <Sparkles size={13} className="text-[#e11d48]" />
+                        <span>⚡ In Tên Số Áo (Studio 3D)</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -612,6 +625,17 @@ export default function CustomerPortal({
       <SizeGuideModal
         isOpen={isSizeGuideOpen}
         onClose={() => setIsSizeGuideOpen(false)}
+      />
+
+      {/* Kit Customizer Modal (Signature 3D Feature) */}
+      <KitCustomizerModal
+        isOpen={Boolean(customizerProduct)}
+        onClose={() => setCustomizerProduct(null)}
+        product={customizerProduct}
+        onAddToCart={(customizedProduct, size) => {
+          addToCart(customizedProduct, size);
+          setIsCartOpen(true);
+        }}
       />
 
       {/* Product Detail Modal */}

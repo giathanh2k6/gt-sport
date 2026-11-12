@@ -399,6 +399,21 @@ export default function CartDrawer({
                           <span className="text-[10px] text-slate-400">Đinh {item.stud_type}</span>
                         )}
                       </div>
+
+                      {/* Thông tin in ấn áo đấu 3D nếu có */}
+                      {item.customization && (
+                        <div className="mt-1.5 px-2 py-1 rounded-lg bg-gradient-to-r from-rose-950/60 to-amber-950/40 border border-[#e11d48]/40 text-[10px] space-y-0.5 shadow-sm">
+                          <div className="flex items-center gap-1.5 font-bold text-[#e11d48]">
+                            <span>⚡ In Áo:</span>
+                            <span className="text-white font-black uppercase tracking-wider">
+                              {item.customization.name} #{item.customization.number}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-slate-400">
+                            Font {item.customization.font} • {item.customization.badge}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between pt-1">

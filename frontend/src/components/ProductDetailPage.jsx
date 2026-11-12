@@ -16,11 +16,14 @@ import {
   Info,
   Footprints,
   Eye,
-  CheckCircle2
+  CheckCircle2,
+  Shirt,
+  Sparkles
 } from 'lucide-react';
 import Navbar from './Navbar';
 import SizeGuideModal from './SizeGuideModal';
 import CartDrawer from './CartDrawer';
+import KitCustomizerModal from './KitCustomizerModal';
 import { useToast } from '../context/ToastContext';
 
 export default function ProductDetailPage({
@@ -46,6 +49,7 @@ export default function ProductDetailPage({
   const [selectedSize, setSelectedSize] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
 
   // Lấy chi tiết sản phẩm từ danh sách có sẵn hoặc gọi API
   useEffect(() => {
@@ -372,6 +376,29 @@ export default function ProductDetailPage({
                 }
                 return null;
               })()}
+
+              {/* Kit Customizer Banner / Trigger Button for Kits */}
+              {isKit && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-rose-950/40 via-[#182030] to-amber-950/40 border border-[#e11d48]/40 shadow-xl space-y-2.5 animate-pulse-glow">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-black text-white flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-[#e11d48]" />
+                      In Tên & Số Lưng Áo Real-Time:
+                    </span>
+                    <span className="text-[10px] bg-[#e11d48]/20 text-rose-300 font-black px-2.5 py-0.5 rounded-full border border-[#e11d48]/40">
+                      Studio 360° • +80.000đ
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomizerOpen(true)}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#e11d48] to-rose-700 hover:from-rose-500 hover:to-[#e11d48] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-rose-950/60 transition active:scale-95 cursor-pointer btn-shine-sweep"
+                  >
+                    <Shirt size={16} />
+                    <span>⚡ Tự Thiết Kế Tên Số Áo (Xoay 3D 360°)</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons: Add to cart & Buy now */}
@@ -493,6 +520,18 @@ export default function ProductDetailPage({
       <SizeGuideModal
         isOpen={isSizeGuideOpen}
         onClose={() => setIsSizeGuideOpen(false)}
+      />
+
+      {/* Kit Customizer Modal (Signature 3D Feature) */}
+      <KitCustomizerModal
+        isOpen={isCustomizerOpen}
+        onClose={() => setIsCustomizerOpen(false)}
+        product={product}
+        initialSize={selectedSize}
+        onAddToCart={(customizedProduct, size) => {
+          addToCart(customizedProduct, size);
+          setIsCartOpen(true);
+        }}
       />
 
       {/* CartDrawer Slide-Over (Day 6 Feature) */}

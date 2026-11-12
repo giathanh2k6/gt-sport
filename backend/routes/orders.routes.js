@@ -128,12 +128,15 @@ router.post('/orders', optionalAuth, (req, res) => {
               }
 
             const orderId = this.lastID;
-            const stmtItem = db.prepare('INSERT INTO order_items (order_id, product_id, size, quantity, price) VALUES (?, ?, ?, ?, ?)');
+            const stmtItem = db.prepare('INSERT INTO order_items (order_id, product_id, size, quantity, price, customization) VALUES (?, ?, ?, ?, ?, ?)');
             const stmtDeduct = db.prepare('UPDATE product_variants SET stock = stock - ? WHERE product_id = ? AND size = ? AND stock >= ?');
 
             try {
               items.forEach((item) => {
-                stmtItem.run(orderId, item.product_id, item.size, item.quantity, item.price);
+                const custStr = item.customization
+                  ? (typeof item.customization === 'object' ? JSON.stringify(item.customization) : String(item.customization))
+                  : null;
+                stmtItem.run(orderId, item.product_id, item.size, item.quantity, item.price, custStr);
                 stmtDeduct.run(item.quantity, item.product_id, item.size, item.quantity);
               });
 

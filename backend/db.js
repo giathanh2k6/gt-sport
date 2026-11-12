@@ -124,10 +124,16 @@ db.serialize(() => {
       size TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       price INTEGER NOT NULL,
+      customization TEXT,
       FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id)
     )
   `);
+
+  // Migration an toàn cho bảng order_items nếu chưa có cột customization
+  db.run(`ALTER TABLE order_items ADD COLUMN customization TEXT`, () => {
+    // Bỏ qua nếu cột đã tồn tại
+  });
 
   // 7. Seed Người Dùng Mẫu (Có băm bcrypt) nếu bảng trống
   db.get('SELECT COUNT(*) AS count FROM users', async (err, row) => {

@@ -168,13 +168,23 @@ export default function ProductDetailModal({
           </div>
 
           {/* Add to Cart Button */}
-          <div className="pt-4 border-t border-[#232a3b]">
+          <div className="pt-4 border-t border-[#232a3b] space-y-2">
             <button
               onClick={handleAdd}
               className="w-full bg-[#e11d48] hover:bg-rose-600 active:scale-95 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-xl shadow-rose-950/50 cursor-pointer"
             >
               <ShoppingBag size={16} /> Thêm Vào Giỏ Hàng Ngay
             </button>
+
+            {product.category_type === 'kit' && (
+              <Link
+                to={`/product/${product.id}`}
+                onClick={onClose}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-950/60 to-[#1e293b] hover:from-[#e11d48] hover:to-rose-700 border border-[#e11d48]/40 text-rose-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg text-center"
+              >
+                <span>⚡ Tự In Tên & Số Áo (Studio 3D)</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

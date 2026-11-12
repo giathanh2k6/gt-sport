@@ -132,7 +132,10 @@ function AppContent() {
     }
 
     const existingIndex = cart.findIndex(
-      (item) => item.product_id === product.id && item.size === size
+      (item) =>
+        item.product_id === product.id &&
+        item.size === size &&
+        JSON.stringify(item.customization || null) === JSON.stringify(product.customization || null)
     );
 
     if (existingIndex > -1) {
@@ -155,7 +158,8 @@ function AppContent() {
           stud_type: product.stud_type,
           size: size,
           quantity: 1,
-          max_stock: variant.stock
+          max_stock: variant.stock,
+          customization: product.customization || null
         }
       ]);
     }

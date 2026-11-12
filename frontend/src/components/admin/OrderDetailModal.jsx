@@ -209,6 +209,29 @@ export default function OrderDetailModal({
                             Số lượng: <strong className="text-white">x{item.quantity}</strong>
                           </span>
                         </div>
+
+                        {/* Chi tiết yêu cầu in áo cho Admin */}
+                        {item.customization && (() => {
+                          let cust = null;
+                          try {
+                            cust = typeof item.customization === 'string' ? JSON.parse(item.customization) : item.customization;
+                          } catch (e) {
+                            cust = { name: item.customization };
+                          }
+                          return (
+                            <div className="mt-2 p-2 bg-gradient-to-r from-rose-950/70 to-amber-950/50 border border-[#e11d48]/50 rounded-lg text-[10px] space-y-0.5">
+                              <div className="flex items-center gap-1.5 text-amber-300 font-bold">
+                                <span>⚡ YÊU CẦU IN ÁO ĐẤU:</span>
+                                <span className="text-white font-black uppercase tracking-wider">
+                                  {cust.name} #{cust.number}
+                                </span>
+                              </div>
+                              <div className="text-slate-300">
+                                Font: <strong className="text-white">{cust.font || 'Mặc định'}</strong> • Huy hiệu: <strong className="text-white">{cust.badge || 'Không dán'}</strong>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
